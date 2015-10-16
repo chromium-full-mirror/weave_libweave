@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -41,10 +41,6 @@ class MockConfigStore : public ConfigStore {
   MOCK_METHOD1(LoadDefaults, bool(Settings*));
   MOCK_METHOD0(LoadSettings, std::string());
   MOCK_METHOD1(SaveSettings, void(const std::string&));
-
-  MOCK_METHOD0(LoadCommandDefs, std::vector<std::string>());
-  MOCK_METHOD0(LoadStateDefs, std::vector<std::string>());
-  MOCK_METHOD0(LoadStateDefaults, std::vector<std::string>());
 };
 
 }  // namespace test

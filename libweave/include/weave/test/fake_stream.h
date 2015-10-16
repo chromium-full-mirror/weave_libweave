@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -31,12 +31,10 @@ class FakeStream : public Stream {
   void CancelPendingOperations() override;
   void Read(void* buffer,
             size_t size_to_read,
-            const ReadSuccessCallback& success_callback,
-            const ErrorCallback& error_callback) override;
+            const ReadCallback& callback) override;
   void Write(const void* buffer,
              size_t size_to_write,
-             const SuccessCallback& success_callback,
-             const ErrorCallback& error_callback) override;
+             const WriteCallback& callback) override;
 
  private:
   provider::TaskRunner* task_runner_{nullptr};

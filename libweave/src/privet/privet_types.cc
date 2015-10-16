@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -58,9 +58,9 @@ const EnumToStringMap<AuthScope>::Map kAuthScopeMap[] = {
 
 const EnumToStringMap<Network::State>::Map kNetworkStateMap[] = {
     {Network::State::kOffline, "offline"},
-    {Network::State::kFailure, "failure"},
+    {Network::State::kError, "error"},
     {Network::State::kConnecting, "connecting"},
-    {Network::State::kConnected, "connected"},
+    {Network::State::kOnline, "online"},
 };
 
 }  // namespace

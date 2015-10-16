@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -16,11 +16,12 @@
 #include "src/commands/unittest_utils.h"
 #include "src/states/mock_state_change_queue_interface.h"
 
-using testing::SaveArg;
+using testing::_;
+using testing::DoAll;
 using testing::Invoke;
 using testing::Return;
 using testing::ReturnPointee;
-using testing::_;
+using testing::SaveArg;
 
 namespace weave {
 
@@ -37,11 +38,10 @@ MATCHER_P(MatchJson, str, "") {
 
 class MockCloudCommandUpdateInterface : public CloudCommandUpdateInterface {
  public:
-  MOCK_METHOD4(UpdateCommand,
+  MOCK_METHOD3(UpdateCommand,
                void(const std::string&,
                     const base::DictionaryValue&,
-                    const base::Closure&,
-                    const base::Closure&));
+                    const DoneCallback&));
 };
 
 // Test back-off entry that uses the test clock.
@@ -112,7 +112,7 @@ class CloudCommandProxyTest : public ::testing::Test {
     CHECK(command_json.get());
 
     command_instance_ =
-        CommandInstance::FromJson(command_json.get(), CommandOrigin::kCloud,
+        CommandInstance::FromJson(command_json.get(), Command::Origin::kCloud,
                                   command_dictionary_, nullptr, nullptr);
     CHECK(command_instance_.get());
 
@@ -146,20 +146,21 @@ class CloudCommandProxyTest : public ::testing::Test {
 
 TEST_F(CloudCommandProxyTest, ImmediateUpdate) {
   const char expected[] = "{'state':'done'}";
-  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expected), _, _));
-  command_instance_->Done();
+  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expected), _));
+  command_instance_->Complete({}, nullptr);
+  task_runner_.RunOnce();
 }
 
 TEST_F(CloudCommandProxyTest, DelayedUpdate) {
   // Simulate that the current device state has changed.
   current_state_update_id_ = 20;
   // No command update is expected here.
-  command_instance_->Done();
+  command_instance_->Complete({}, nullptr);
   // Still no command update here...
   callbacks_.Notify(19);
   // Now we should get the update...
   const char expected[] = "{'state':'done'}";
-  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expected), _, _));
+  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expected), _));
   callbacks_.Notify(20);
 }
 
@@ -168,18 +169,18 @@ TEST_F(CloudCommandProxyTest, InFlightRequest) {
   //    state=inProgress
   //    progress={...}
   // The first state update is sent immediately, the second should be delayed.
-  base::Closure on_success;
-  EXPECT_CALL(cloud_updater_,
-              UpdateCommand(kCmdID, MatchJson("{'state':'inProgress'}"), _, _))
-      .WillOnce(SaveArg<2>(&on_success));
+  DoneCallback callback;
+  EXPECT_CALL(
+      cloud_updater_,
+      UpdateCommand(
+          kCmdID,
+          MatchJson("{'state':'inProgress', 'progress':{'status':'ready'}}"),
+          _))
+      .WillOnce(SaveArg<2>(&callback));
   EXPECT_TRUE(command_instance_->SetProgress(
       *CreateDictionaryValue("{'status': 'ready'}"), nullptr));
 
-  // Now simulate the first request completing.
-  // The second request should be sent now.
-  const char expected[] = "{'progress':{'status':'ready'}}";
-  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expected), _, _));
-  on_success.Run();
+  task_runner_.RunOnce();
 }
 
 TEST_F(CloudCommandProxyTest, CombineMultiple) {
@@ -198,45 +199,38 @@ TEST_F(CloudCommandProxyTest, CombineMultiple) {
     'progress': {'status':'ready'},
     'state':'inProgress'
   })";
-  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expected), _, _));
+  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expected), _));
   callbacks_.Notify(20);
 }
 
 TEST_F(CloudCommandProxyTest, RetryFailed) {
-  base::Closure on_error;
-  const char expect1[] = "{'state':'inProgress'}";
-  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expect1), _, _))
-      .WillOnce(SaveArg<3>(&on_error));
+  DoneCallback callback;
+
+  const char expect[] =
+      "{'state':'inProgress', 'progress': {'status': 'ready'}}";
+  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expect), _))
+      .Times(3)
+      .WillRepeatedly(SaveArg<2>(&callback));
+  auto started = task_runner_.GetClock()->Now();
   EXPECT_TRUE(command_instance_->SetProgress(
       *CreateDictionaryValue("{'status': 'ready'}"), nullptr));
+  task_runner_.Run();
+  ErrorPtr error;
+  Error::AddTo(&error, FROM_HERE, "TEST", "TEST", "TEST");
+  callback.Run(error->Clone());
+  task_runner_.Run();
+  EXPECT_GE(task_runner_.GetClock()->Now() - started,
+            base::TimeDelta::FromSecondsD(0.9));
 
-  // Now pretend the first command update request has failed.
-  // We should retry with both state and progress fields updated this time,
-  // after the initial backoff (which should be 1s in our case).
-  base::TimeDelta expected_delay = base::TimeDelta::FromSeconds(1);
-  on_error.Run();
+  callback.Run(error->Clone());
+  task_runner_.Run();
+  EXPECT_GE(task_runner_.GetClock()->Now() - started,
+            base::TimeDelta::FromSecondsD(2.9));
 
-  // Execute the delayed request. But pretend that it failed too.
-  const char expect2[] = R"({
-    'progress': {'status':'ready'},
-    'state':'inProgress'
-  })";
-  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expect2), _, _))
-      .WillOnce(SaveArg<3>(&on_error));
-  task_runner_.RunOnce();
-
-  // Now backoff should be 2 seconds.
-  expected_delay = base::TimeDelta::FromSeconds(2);
-  on_error.Run();
-
-  // Retry the task.
-  base::Closure on_success;
-  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expect2), _, _))
-      .WillOnce(SaveArg<2>(&on_success));
-  task_runner_.RunOnce();
-
-  // Pretend it succeeds this time.
-  on_success.Run();
+  callback.Run(nullptr);
+  task_runner_.Run();
+  EXPECT_GE(task_runner_.GetClock()->Now() - started,
+            base::TimeDelta::FromSecondsD(2.9));
 }
 
 TEST_F(CloudCommandProxyTest, GateOnStateUpdates) {
@@ -247,23 +241,23 @@ TEST_F(CloudCommandProxyTest, GateOnStateUpdates) {
   EXPECT_TRUE(command_instance_->SetProgress(
       *CreateDictionaryValue("{'status': 'busy'}"), nullptr));
   current_state_update_id_ = 22;
-  command_instance_->Done();
+  command_instance_->Complete({}, nullptr);
 
   // Device state #20 updated.
-  base::Closure on_success;
+  DoneCallback callback;
   const char expect1[] = R"({
     'progress': {'status':'ready'},
     'state':'inProgress'
   })";
-  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expect1), _, _))
-      .WillOnce(SaveArg<2>(&on_success));
+  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expect1), _))
+      .WillOnce(SaveArg<2>(&callback));
   callbacks_.Notify(20);
-  on_success.Run();
+  callback.Run(nullptr);
 
   // Device state #21 updated.
   const char expect2[] = "{'progress': {'status':'busy'}}";
-  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expect2), _, _))
-      .WillOnce(SaveArg<2>(&on_success));
+  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expect2), _))
+      .WillOnce(SaveArg<2>(&callback));
   callbacks_.Notify(21);
 
   // Device state #22 updated. Nothing happens here since the previous command
@@ -273,9 +267,9 @@ TEST_F(CloudCommandProxyTest, GateOnStateUpdates) {
   // Now the command update is complete, send out the patch that happened after
   // the state #22 was updated.
   const char expect3[] = "{'state': 'done'}";
-  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expect3), _, _))
-      .WillOnce(SaveArg<2>(&on_success));
-  on_success.Run();
+  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expect3), _))
+      .WillOnce(SaveArg<2>(&callback));
+  callback.Run(nullptr);
 }
 
 TEST_F(CloudCommandProxyTest, CombineSomeStates) {
@@ -286,25 +280,25 @@ TEST_F(CloudCommandProxyTest, CombineSomeStates) {
   EXPECT_TRUE(command_instance_->SetProgress(
       *CreateDictionaryValue("{'status': 'busy'}"), nullptr));
   current_state_update_id_ = 22;
-  command_instance_->Done();
+  command_instance_->Complete({}, nullptr);
 
   // Device state 20-21 updated.
-  base::Closure on_success;
+  DoneCallback callback;
   const char expect1[] = R"({
     'progress': {'status':'busy'},
     'state':'inProgress'
   })";
-  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expect1), _, _))
-      .WillOnce(SaveArg<2>(&on_success));
+  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expect1), _))
+      .WillOnce(SaveArg<2>(&callback));
   callbacks_.Notify(21);
-  on_success.Run();
+  callback.Run(nullptr);
 
   // Device state #22 updated.
   const char expect2[] = "{'state': 'done'}";
-  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expect2), _, _))
-      .WillOnce(SaveArg<2>(&on_success));
+  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expect2), _))
+      .WillOnce(SaveArg<2>(&callback));
   callbacks_.Notify(22);
-  on_success.Run();
+  callback.Run(nullptr);
 }
 
 TEST_F(CloudCommandProxyTest, CombineAllStates) {
@@ -315,14 +309,14 @@ TEST_F(CloudCommandProxyTest, CombineAllStates) {
   EXPECT_TRUE(command_instance_->SetProgress(
       *CreateDictionaryValue("{'status': 'busy'}"), nullptr));
   current_state_update_id_ = 22;
-  command_instance_->Done();
+  command_instance_->Complete({}, nullptr);
 
   // Device state 30 updated.
   const char expected[] = R"({
     'progress': {'status':'busy'},
     'state':'done'
   })";
-  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expected), _, _));
+  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expected), _));
   callbacks_.Notify(30);
 }
 
@@ -334,16 +328,15 @@ TEST_F(CloudCommandProxyTest, CoalesceUpdates) {
       *CreateDictionaryValue("{'status': 'busy'}"), nullptr));
   EXPECT_TRUE(command_instance_->SetProgress(
       *CreateDictionaryValue("{'status': 'finished'}"), nullptr));
-  EXPECT_TRUE(command_instance_->SetResults(
-      *CreateDictionaryValue("{'sum': 30}"), nullptr));
-  command_instance_->Done();
+  EXPECT_TRUE(command_instance_->Complete(*CreateDictionaryValue("{'sum': 30}"),
+                                          nullptr));
 
   const char expected[] = R"({
     'progress': {'status':'finished'},
     'results': {'sum':30},
     'state':'done'
   })";
-  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expected), _, _));
+  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expected), _));
   callbacks_.Notify(30);
 }
 
@@ -359,8 +352,9 @@ TEST_F(CloudCommandProxyTest, EmptyStateChangeQueue) {
 
   // As soon as we change the command, the update to the server should be sent.
   const char expected[] = "{'state':'done'}";
-  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expected), _, _));
-  command_instance_->Done();
+  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expected), _));
+  command_instance_->Complete({}, nullptr);
+  task_runner_.RunOnce();
 }
 
 TEST_F(CloudCommandProxyTest, NonEmptyStateChangeQueue) {
@@ -372,11 +366,11 @@ TEST_F(CloudCommandProxyTest, NonEmptyStateChangeQueue) {
   CreateCommandInstance();
 
   // No command updates right now.
-  command_instance_->Done();
+  command_instance_->Complete({}, nullptr);
 
   // Only when the state #20 is published we should update the command
   const char expected[] = "{'state':'done'}";
-  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expected), _, _));
+  EXPECT_CALL(cloud_updater_, UpdateCommand(kCmdID, MatchJson(expected), _));
   callbacks_.Notify(20);
 }
 

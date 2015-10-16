@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -7,7 +7,6 @@
 #include <base/values.h>
 #include <weave/enum_to_string.h>
 #include <weave/error.h>
-#include <weave/provider/config_store.h>
 
 #include "src/commands/schema_constants.h"
 #include "src/utils.h"
@@ -93,15 +92,11 @@ bool CommandManager::LoadCommands(const std::string& json,
   return LoadCommands(*dict, error);
 }
 
-void CommandManager::Startup(provider::ConfigStore* config_store) {
+void CommandManager::Startup() {
   LOG(INFO) << "Initializing CommandManager.";
 
   // Load global standard GCD command dictionary.
   CHECK(LoadBaseCommands(kBaseCommandDefs, nullptr));
-
-  // Loading the rest of commands.
-  for (const auto& defs : config_store->LoadCommandDefs())
-    CHECK(this->LoadCommands(defs, nullptr));
 }
 
 void CommandManager::AddCommand(
@@ -119,8 +114,9 @@ bool CommandManager::AddCommand(const base::DictionaryValue& command,
                                 UserRole role,
                                 std::string* id,
                                 ErrorPtr* error) {
-  auto command_instance = CommandInstance::FromJson(
-      &command, CommandOrigin::kLocal, GetCommandDictionary(), nullptr, error);
+  auto command_instance =
+      CommandInstance::FromJson(&command, Command::Origin::kLocal,
+                                GetCommandDictionary(), nullptr, error);
   if (!command_instance)
     return false;
 
@@ -176,13 +172,21 @@ bool CommandManager::SetCommandVisibility(
 }
 
 void CommandManager::AddCommandAddedCallback(
-    const Device::CommandCallback& callback) {
+    const CommandQueue::CommandCallback& callback) {
   command_queue_.AddCommandAddedCallback(callback);
 }
 
 void CommandManager::AddCommandRemovedCallback(
-    const Device::CommandCallback& callback) {
+    const CommandQueue::CommandCallback& callback) {
   command_queue_.AddCommandRemovedCallback(callback);
+}
+
+void CommandManager::AddCommandHandler(
+    const std::string& command_name,
+    const Device::CommandHandlerCallback& callback) {
+  CHECK(command_name.empty() || dictionary_.FindCommand(command_name))
+      << "Command undefined: " << command_name;
+  command_queue_.AddCommandHandler(command_name, callback);
 }
 
 }  // namespace weave

@@ -1,16 +1,14 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "src/http_constants.h"
 
+#include <weave/enum_to_string.h>
+#include <weave/provider/http_client.h>
+
 namespace weave {
 namespace http {
-
-const char kGet[] = "GET";
-const char kPatch[] = "PATCH";
-const char kPost[] = "POST";
-const char kPut[] = "PUT";
 
 const char kAuthorization[] = "Authorization";
 const char kContentType[] = "Content-Type";
@@ -21,4 +19,21 @@ const char kPlain[] = "text/plain";
 const char kWwwFormUrlEncoded[] = "application/x-www-form-urlencoded";
 
 }  // namespace http
+
+using provider::HttpClient;
+
+namespace {
+
+const weave::EnumToStringMap<HttpClient::Method>::Map kMapMethod[] = {
+    {HttpClient::Method::kGet, "GET"},
+    {HttpClient::Method::kPost, "POST"},
+    {HttpClient::Method::kPut, "PUT"},
+    {HttpClient::Method::kPatch, "PATCH"}};
+
+}  // namespace
+
+template <>
+LIBWEAVE_EXPORT EnumToStringMap<HttpClient::Method>::EnumToStringMap()
+    : EnumToStringMap(kMapMethod) {}
+
 }  // namespace weave

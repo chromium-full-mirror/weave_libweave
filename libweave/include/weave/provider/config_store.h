@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -34,15 +34,6 @@ class ConfigStore {
   // modifications. Data stored in settings can be sensitive, so it's highly
   // recommended to protect data, e.g. using encryption.
   virtual void SaveSettings(const std::string& settings) = 0;
-
-  // Returns command definitions as array of JSONs.
-  virtual std::vector<std::string> LoadCommandDefs() = 0;
-
-  // Returns device state definitions as array of JSONs.
-  virtual std::vector<std::string> LoadStateDefs() = 0;
-
-  // Returns device state defaults as array of JSONs.
-  virtual std::vector<std::string> LoadStateDefaults() = 0;
 
  protected:
   virtual ~ConfigStore() = default;

@@ -1,3 +1,6 @@
+# Copyright 2015 The Weave Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 {
   'target_defaults': {
     'configurations': {
@@ -21,7 +24,7 @@
     'include_dirs': [
       '.',
       'include',
-      'external',
+      'third_party/chromium',
       'third_party/include',
       'third_party/modp_b64/modp_b64',
     ],

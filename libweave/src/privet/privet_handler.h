@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -47,6 +47,9 @@ class PrivetHandler : public CloudDelegate::Observer {
 
   void OnCommandDefsChanged() override;
   void OnStateChanged() override;
+
+  std::vector<std::string> GetHttpPaths() const;
+  std::vector<std::string> GetHttpsPaths() const;
 
   // Handles HTTP/HTTPS Privet request.
   // |api| is the path from the HTTP request, e.g /privet/info.

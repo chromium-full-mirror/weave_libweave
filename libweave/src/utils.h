@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -29,6 +29,8 @@ const char kDefaultCategory[] = "";
 std::unique_ptr<base::DictionaryValue> LoadJsonDict(
     const std::string& json_string,
     ErrorPtr* error);
+
+std::unique_ptr<base::DictionaryValue> ErrorInfoToJson(const Error& error);
 
 }  // namespace weave
 

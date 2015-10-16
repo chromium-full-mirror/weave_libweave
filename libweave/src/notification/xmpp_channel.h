@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -97,15 +97,12 @@ class XmppChannel : public NotificationChannel,
   void RestartXmppStream();
 
   void CreateSslSocket();
-  void OnSslSocketReady(std::unique_ptr<Stream> stream);
-  void OnSslError(const Error* error);
+  void OnSslSocketReady(std::unique_ptr<Stream> stream, ErrorPtr error);
 
   void WaitForMessage();
 
-  void OnMessageRead(size_t size);
-  void OnMessageSent();
-  void OnReadError(const Error* error);
-  void OnWriteError(const Error* error);
+  void OnMessageRead(size_t size, ErrorPtr error);
+  void OnMessageSent(ErrorPtr error);
   void Restart();
   void CloseStream();
 

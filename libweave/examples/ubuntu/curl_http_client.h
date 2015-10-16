@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -24,28 +24,14 @@ class CurlHttpClient : public provider::HttpClient {
  public:
   explicit CurlHttpClient(provider::TaskRunner* task_runner);
 
-  std::unique_ptr<Response> SendRequestAndBlock(const std::string& method,
-                                                const std::string& url,
-                                                const Headers& headers,
-                                                const std::string& data,
-                                                ErrorPtr* error) override;
-  int SendRequest(const std::string& method,
-                  const std::string& url,
-                  const Headers& headers,
-                  const std::string& data,
-                  const SuccessCallback& success_callback,
-                  const ErrorCallback& error_callback) override;
+  void SendRequest(Method method,
+                   const std::string& url,
+                   const Headers& headers,
+                   const std::string& data,
+                   const SendRequestCallback& callback) override;
 
  private:
-  void RunSuccessCallback(const SuccessCallback& success_callback,
-                          int id,
-                          std::unique_ptr<Response> response);
-  void RunErrorCallback(const ErrorCallback& error_callback,
-                        int id,
-                        ErrorPtr error);
-
   provider::TaskRunner* task_runner_{nullptr};
-  int request_id_ = 0;
 
   base::WeakPtrFactory<CurlHttpClient> weak_ptr_factory_{this};
 };

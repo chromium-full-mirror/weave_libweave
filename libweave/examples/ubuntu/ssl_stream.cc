@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -23,14 +23,13 @@ void SSLStream::RunDelayedTask(const base::Closure& task) {
 
 void SSLStream::Read(void* buffer,
                      size_t size_to_read,
-                     const ReadSuccessCallback& success_callback,
-                     const ErrorCallback& error_callback) {
+                     const ReadCallback& callback) {
   int res = SSL_read(ssl_.get(), buffer, size_to_read);
   if (res > 0) {
     task_runner_->PostDelayedTask(
         FROM_HERE,
         base::Bind(&SSLStream::RunDelayedTask, weak_ptr_factory_.GetWeakPtr(),
-                   base::Bind(success_callback, res)),
+                   base::Bind(callback, res, nullptr)),
         {});
     return;
   }
@@ -39,9 +38,8 @@ void SSLStream::Read(void* buffer,
 
   if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
     task_runner_->PostDelayedTask(
-        FROM_HERE,
-        base::Bind(&SSLStream::Read, weak_ptr_factory_.GetWeakPtr(), buffer,
-                   size_to_read, success_callback, error_callback),
+        FROM_HERE, base::Bind(&SSLStream::Read, weak_ptr_factory_.GetWeakPtr(),
+                              buffer, size_to_read, callback),
         base::TimeDelta::FromSeconds(1));
     return;
   }
@@ -51,17 +49,15 @@ void SSLStream::Read(void* buffer,
                "SSL error");
   task_runner_->PostDelayedTask(
       FROM_HERE,
-      base::Bind(
-          &SSLStream::RunDelayedTask, weak_ptr_factory_.GetWeakPtr(),
-          base::Bind(error_callback, base::Owned(weave_error.release()))),
+      base::Bind(&SSLStream::RunDelayedTask, weak_ptr_factory_.GetWeakPtr(),
+                 base::Bind(callback, 0, base::Passed(&weave_error))),
       {});
   return;
 }
 
 void SSLStream::Write(const void* buffer,
                       size_t size_to_write,
-                      const SuccessCallback& success_callback,
-                      const ErrorCallback& error_callback) {
+                      const WriteCallback& callback) {
   int res = SSL_write(ssl_.get(), buffer, size_to_write);
   if (res > 0) {
     buffer = static_cast<const char*>(buffer) + res;
@@ -70,15 +66,14 @@ void SSLStream::Write(const void* buffer,
       task_runner_->PostDelayedTask(
           FROM_HERE,
           base::Bind(&SSLStream::RunDelayedTask, weak_ptr_factory_.GetWeakPtr(),
-                     success_callback),
+                     base::Bind(callback, nullptr)),
           {});
       return;
     }
 
     task_runner_->PostDelayedTask(
-        FROM_HERE,
-        base::Bind(&SSLStream::Write, weak_ptr_factory_.GetWeakPtr(), buffer,
-                   size_to_write, success_callback, error_callback),
+        FROM_HERE, base::Bind(&SSLStream::Write, weak_ptr_factory_.GetWeakPtr(),
+                              buffer, size_to_write, callback),
         base::TimeDelta::FromSeconds(1));
 
     return;
@@ -88,9 +83,8 @@ void SSLStream::Write(const void* buffer,
 
   if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
     task_runner_->PostDelayedTask(
-        FROM_HERE,
-        base::Bind(&SSLStream::Write, weak_ptr_factory_.GetWeakPtr(), buffer,
-                   size_to_write, success_callback, error_callback),
+        FROM_HERE, base::Bind(&SSLStream::Write, weak_ptr_factory_.GetWeakPtr(),
+                              buffer, size_to_write, callback),
         base::TimeDelta::FromSeconds(1));
     return;
   }
@@ -100,9 +94,8 @@ void SSLStream::Write(const void* buffer,
                "SSL error");
   task_runner_->PostDelayedTask(
       FROM_HERE,
-      base::Bind(
-          &SSLStream::RunDelayedTask, weak_ptr_factory_.GetWeakPtr(),
-          base::Bind(error_callback, base::Owned(weave_error.release()))),
+      base::Bind(&SSLStream::RunDelayedTask, weak_ptr_factory_.GetWeakPtr(),
+                 base::Bind(callback, base::Passed(&weave_error))),
       {});
   return;
 }

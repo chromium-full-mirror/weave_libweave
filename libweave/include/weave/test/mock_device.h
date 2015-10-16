@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -21,27 +21,32 @@ class MockDevice : public Device {
   MOCK_CONST_METHOD0(GetSettings, const Settings&());
   MOCK_METHOD1(AddSettingsChangedCallback,
                void(const SettingsChangedCallback& callback));
-  MOCK_METHOD1(AddCommandAddedCallback, void(const CommandCallback&));
-  MOCK_METHOD1(AddCommandRemovedCallback, void(const CommandCallback&));
+  MOCK_METHOD1(AddCommandDefinitionsFromJson, void(const std::string&));
+  MOCK_METHOD1(AddCommandDefinitions, void(const base::DictionaryValue&));
+  MOCK_METHOD2(AddCommandHandler,
+               void(const std::string&, const CommandHandlerCallback&));
   MOCK_METHOD3(AddCommand,
                bool(const base::DictionaryValue&, std::string*, ErrorPtr*));
   MOCK_METHOD1(FindCommand, Command*(const std::string&));
   MOCK_METHOD1(AddStateChangedCallback, void(const base::Closure& callback));
+  MOCK_METHOD1(AddStateDefinitionsFromJson, void(const std::string&));
+  MOCK_METHOD1(AddStateDefinitions, void(const base::DictionaryValue&));
+  MOCK_METHOD2(SetStatePropertiesFromJson, bool(const std::string&, ErrorPtr*));
+  MOCK_METHOD2(SetStateProperties,
+               bool(const base::DictionaryValue&, ErrorPtr*));
   MOCK_CONST_METHOD1(MockGetStateProperty,
                      base::Value*(const std::string& name));
   MOCK_METHOD3(SetStateProperty,
                bool(const std::string& name,
                     const base::Value& value,
                     ErrorPtr* error));
-  MOCK_METHOD2(SetStateProperties,
-               bool(const base::DictionaryValue& property_set,
-                    ErrorPtr* error));
   MOCK_CONST_METHOD0(MockGetState, base::DictionaryValue*());
   MOCK_CONST_METHOD0(GetGcdState, GcdState());
   MOCK_METHOD1(AddGcdStateChangedCallback,
                void(const GcdStateChangedCallback& callback));
   MOCK_METHOD2(Register,
-               std::string(const std::string& ticket_id, ErrorPtr* error));
+               void(const std::string& ticket_id,
+                    const DoneCallback& callback));
   MOCK_METHOD2(AddPairingChangedCallbacks,
                void(const PairingBeginCallback& begin_callback,
                     const PairingEndCallback& end_callback));

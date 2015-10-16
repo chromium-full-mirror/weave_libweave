@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -44,11 +44,10 @@ class SecurityManager;
 
 class Manager : public CloudDelegate::Observer {
  public:
-  Manager();
+  explicit Manager(provider::TaskRunner* task_runner);
   ~Manager() override;
 
-  void Start(provider::TaskRunner* task_runner,
-             provider::Network* network,
+  void Start(provider::Network* network,
              provider::DnsServiceDiscovery* dns_sd,
              provider::HttpServer* http_server,
              provider::Wifi* wifi,
@@ -67,21 +66,24 @@ class Manager : public CloudDelegate::Observer {
   void OnDeviceInfoChanged() override;
 
   void PrivetRequestHandler(
-      const provider::HttpServer::Request& request,
-      const provider::HttpServer::OnReplyCallback& callback);
+      std::unique_ptr<provider::HttpServer::Request> request);
+
+  void PrivetRequestHandlerWithData(
+      const std::shared_ptr<provider::HttpServer::Request>& request,
+      const std::string& data);
 
   void PrivetResponseHandler(
-      const provider::HttpServer::OnReplyCallback& callback,
+      const std::shared_ptr<provider::HttpServer::Request>& request,
       int status,
       const base::DictionaryValue& output);
 
   void OnChanged();
   void OnConnectivityChanged();
 
-  void OnHttpServerStatusChanged(const provider::HttpServer& server);
   void SaveDeviceSecret(Config* config);
 
   bool disable_security_{false};
+  provider::TaskRunner* task_runner_{nullptr};
   std::unique_ptr<CloudDelegate> cloud_;
   std::unique_ptr<DeviceDelegate> device_;
   std::unique_ptr<SecurityManager> security_;

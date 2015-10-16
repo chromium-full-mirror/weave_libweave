@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -18,37 +18,32 @@ class HttpServer {
  public:
   class Request {
    public:
-    virtual const std::string& GetPath() const = 0;
-    virtual std::string GetFirstHeader(const std::string& name) const = 0;
-    virtual const std::vector<uint8_t>& GetData() const = 0;
-    virtual std::unique_ptr<Stream> GetDataStream() const = 0;
-
-   protected:
     virtual ~Request() = default;
+
+    virtual std::string GetPath() const = 0;
+    virtual std::string GetFirstHeader(const std::string& name) const = 0;
+    virtual std::string GetData() = 0;
+
+    virtual void SendReply(int status_code,
+                           const std::string& data,
+                           const std::string& mime_type) = 0;
   };
 
-  using OnStateChangedCallback = base::Callback<void(const HttpServer& server)>;
+  // Callback type for AddRequestHandler.
+  using RequestHandlerCallback =
+      base::Callback<void(std::unique_ptr<Request> request)>;
 
-  using OnReplyCallback = base::Callback<void(int status_code,
-                                              const std::string& data,
-                                              const std::string& mime_type)>;
-
-  using OnRequestCallback =
-      base::Callback<void(const Request& request,
-                          const OnReplyCallback& callback)>;
-
-  // Adds notification callback for server started/stopped serving requests.
-  virtual void AddOnStateChangedCallback(
-      const OnStateChangedCallback& callback) = 0;
-
-  // Adds callback called on new http/https requests with the given path prefix.
-  virtual void AddRequestHandler(const std::string& path_prefix,
-                                 const OnRequestCallback& callback) = 0;
+  // Adds callback called on new http/https requests with the given path.
+  virtual void AddHttpRequestHandler(
+      const std::string& path,
+      const RequestHandlerCallback& callback) = 0;
+  virtual void AddHttpsRequestHandler(
+      const std::string& path,
+      const RequestHandlerCallback& callback) = 0;
 
   virtual uint16_t GetHttpPort() const = 0;
   virtual uint16_t GetHttpsPort() const = 0;
-  virtual const std::vector<uint8_t>& GetHttpsCertificateFingerprint()
-      const = 0;
+  virtual std::vector<uint8_t> GetHttpsCertificateFingerprint() const = 0;
 
  protected:
   virtual ~HttpServer() = default;

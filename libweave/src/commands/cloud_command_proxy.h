@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -17,6 +17,7 @@
 
 #include "src/backoff_entry.h"
 #include "src/commands/cloud_command_update_interface.h"
+#include "src/commands/command_instance.h"
 #include "src/states/state_change_queue_interface.h"
 
 namespace weave {
@@ -28,7 +29,7 @@ class TaskRunner;
 }
 
 // Command proxy which publishes command updates to the cloud.
-class CloudCommandProxy final : public Command::Observer {
+class CloudCommandProxy final : public CommandInstance::Observer {
  public:
   CloudCommandProxy(CommandInstance* command_instance,
                     CloudCommandUpdateInterface* cloud_command_updater,
@@ -38,10 +39,11 @@ class CloudCommandProxy final : public Command::Observer {
   ~CloudCommandProxy() override = default;
 
   // CommandProxyInterface implementation/overloads.
-  void OnResultsChanged() override;
-  void OnStatusChanged() override;
-  void OnProgressChanged() override;
   void OnCommandDestroyed() override;
+  void OnErrorChanged() override;
+  void OnProgressChanged() override;
+  void OnResultsChanged() override;
+  void OnStateChanged() override;
 
  private:
   using UpdateID = StateChangeQueueInterface::UpdateID;
@@ -61,9 +63,7 @@ class CloudCommandProxy final : public Command::Observer {
   void ResendCommandUpdate();
 
   // Callback invoked by the asynchronous PATCH request to the server.
-  // Called both in a case of successfully updating server command resource
-  // and in case of an error, indicated by the |success| parameter.
-  void OnUpdateCommandFinished(bool success);
+  void OnUpdateCommandDone(ErrorPtr error);
 
   // Callback invoked by the device state change queue to notify of the
   // successful device state update. |update_id| is the ID of the state that
@@ -93,7 +93,7 @@ class CloudCommandProxy final : public Command::Observer {
   // successfully.
   UpdateID last_state_update_id_{0};
 
-  ScopedObserver<Command, Command::Observer> observer_{this};
+  ScopedObserver<CommandInstance, CommandInstance::Observer> observer_{this};
 
   base::WeakPtrFactory<CloudCommandProxy> backoff_weak_ptr_factory_{this};
   base::WeakPtrFactory<CloudCommandProxy> weak_ptr_factory_{this};

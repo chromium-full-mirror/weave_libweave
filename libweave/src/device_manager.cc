@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -34,10 +34,10 @@ DeviceManager::DeviceManager(provider::ConfigStore* config_store,
                              provider::Wifi* wifi,
                              provider::Bluetooth* bluetooth) {
   command_manager_ = std::make_shared<CommandManager>();
-  command_manager_->Startup(config_store);
+  command_manager_->Startup();
   state_change_queue_.reset(new StateChangeQueue(kMaxStateChangeQueueSize));
   state_manager_ = std::make_shared<StateManager>(state_change_queue_.get());
-  state_manager_->Startup(config_store);
+  state_manager_->Startup();
 
   std::unique_ptr<Config> config{new Config{config_store}};
   config->Load();
@@ -45,8 +45,7 @@ DeviceManager::DeviceManager(provider::ConfigStore* config_store,
   device_info_.reset(new DeviceRegistrationInfo(
       command_manager_, state_manager_, std::move(config), task_runner,
       http_client, network));
-  base_api_handler_.reset(
-      new BaseApiHandler{device_info_.get(), state_manager_, command_manager_});
+  base_api_handler_.reset(new BaseApiHandler{device_info_.get(), this});
 
   device_info_->Start();
 
@@ -78,10 +77,9 @@ void DeviceManager::StartPrivet(provider::TaskRunner* task_runner,
                                 provider::HttpServer* http_server,
                                 provider::Wifi* wifi,
                                 provider::Bluetooth* bluetooth) {
-  privet_.reset(new privet::Manager{});
-  privet_->Start(task_runner, network, dns_sd, http_server, wifi,
-                 device_info_.get(), command_manager_.get(),
-                 state_manager_.get());
+  privet_.reset(new privet::Manager{task_runner});
+  privet_->Start(network, dns_sd, http_server, wifi, device_info_.get(),
+                 command_manager_.get(), state_manager_.get());
 }
 
 GcdState DeviceManager::GetGcdState() const {
@@ -93,8 +91,12 @@ void DeviceManager::AddGcdStateChangedCallback(
   device_info_->AddGcdStateChangedCallback(callback);
 }
 
-void DeviceManager::AddStateChangedCallback(const base::Closure& callback) {
-  state_manager_->AddChangedCallback(callback);
+void DeviceManager::AddCommandDefinitionsFromJson(const std::string& json) {
+  CHECK(command_manager_->LoadCommands(json, nullptr));
+}
+
+void DeviceManager::AddCommandDefinitions(const base::DictionaryValue& dict) {
+  CHECK(command_manager_->LoadCommands(dict, nullptr));
 }
 
 bool DeviceManager::AddCommand(const base::DictionaryValue& command,
@@ -107,18 +109,31 @@ Command* DeviceManager::FindCommand(const std::string& id) {
   return command_manager_->FindCommand(id);
 }
 
-void DeviceManager::AddCommandAddedCallback(const CommandCallback& callback) {
-  return command_manager_->AddCommandAddedCallback(callback);
+void DeviceManager::AddCommandHandler(const std::string& command_name,
+                                      const CommandHandlerCallback& callback) {
+  return command_manager_->AddCommandHandler(command_name, callback);
 }
 
-void DeviceManager::AddCommandRemovedCallback(const CommandCallback& callback) {
-  return command_manager_->AddCommandRemovedCallback(callback);
+void DeviceManager::AddStateChangedCallback(const base::Closure& callback) {
+  state_manager_->AddChangedCallback(callback);
 }
 
-bool DeviceManager::SetStateProperties(
-    const base::DictionaryValue& property_set,
-    ErrorPtr* error) {
-  return state_manager_->SetProperties(property_set, error);
+void DeviceManager::AddStateDefinitionsFromJson(const std::string& json) {
+  CHECK(state_manager_->LoadStateDefinitionFromJson(json, nullptr));
+}
+
+void DeviceManager::AddStateDefinitions(const base::DictionaryValue& dict) {
+  CHECK(state_manager_->LoadStateDefinition(dict, nullptr));
+}
+
+bool DeviceManager::SetStatePropertiesFromJson(const std::string& json,
+                                               ErrorPtr* error) {
+  return state_manager_->SetPropertiesFromJson(json, error);
+}
+
+bool DeviceManager::SetStateProperties(const base::DictionaryValue& dict,
+                                       ErrorPtr* error) {
+  return state_manager_->SetProperties(dict, error);
 }
 
 std::unique_ptr<base::Value> DeviceManager::GetStateProperty(
@@ -136,9 +151,9 @@ std::unique_ptr<base::DictionaryValue> DeviceManager::GetState() const {
   return state_manager_->GetState();
 }
 
-std::string DeviceManager::Register(const std::string& ticket_id,
-                                    ErrorPtr* error) {
-  return device_info_->RegisterDevice(ticket_id, error);
+void DeviceManager::Register(const std::string& ticket_id,
+                             const DoneCallback& callback) {
+  device_info_->RegisterDevice(ticket_id, callback);
 }
 
 void DeviceManager::AddPairingChangedCallbacks(

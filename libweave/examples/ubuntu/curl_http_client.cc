@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -7,6 +7,7 @@
 #include <base/bind.h>
 #include <curl/curl.h>
 #include <weave/provider/task_runner.h>
+#include <weave/enum_to_string.h>
 
 namespace weave {
 namespace examples {
@@ -14,11 +15,11 @@ namespace examples {
 namespace {
 
 struct ResponseImpl : public provider::HttpClient::Response {
-  int GetStatusCode() const { return status; }
-  std::string GetContentType() const { return content_type; }
-  const std::string& GetData() const { return data; }
+  int GetStatusCode() const override { return status; }
+  std::string GetContentType() const override { return content_type; }
+  std::string GetData() const override { return data; }
 
-  int status;
+  long status{0};
   std::string content_type;
   std::string data;
 };
@@ -34,23 +35,27 @@ size_t WriteFunction(void* contents, size_t size, size_t nmemb, void* userp) {
 CurlHttpClient::CurlHttpClient(provider::TaskRunner* task_runner)
     : task_runner_{task_runner} {}
 
-std::unique_ptr<provider::HttpClient::Response>
-CurlHttpClient::SendRequestAndBlock(const std::string& method,
-                                    const std::string& url,
-                                    const Headers& headers,
-                                    const std::string& data,
-                                    ErrorPtr* error) {
+void CurlHttpClient::SendRequest(Method method,
+                                 const std::string& url,
+                                 const Headers& headers,
+                                 const std::string& data,
+                                 const SendRequestCallback& callback) {
   std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> curl{curl_easy_init(),
                                                            &curl_easy_cleanup};
   CHECK(curl);
 
-  if (method == "GET") {
+  switch (method) {
+    case Method::kGet:
     CHECK_EQ(CURLE_OK, curl_easy_setopt(curl.get(), CURLOPT_HTTPGET, 1L));
-  } else if (method == "POST") {
+    break;
+    case Method::kPost:
     CHECK_EQ(CURLE_OK, curl_easy_setopt(curl.get(), CURLOPT_HTTPPOST, 1L));
-  } else {
-    CHECK_EQ(CURLE_OK, curl_easy_setopt(curl.get(), CURLOPT_CUSTOMREQUEST,
-                                        method.c_str()));
+    break;
+    case Method::kPatch:
+    case Method::kPut:
+      CHECK_EQ(CURLE_OK, curl_easy_setopt(curl.get(), CURLOPT_CUSTOMREQUEST,
+                                          weave::EnumToString(method).c_str()));
+      break;
   }
 
   CHECK_EQ(CURLE_OK, curl_easy_setopt(curl.get(), CURLOPT_URL, url.c_str()));
@@ -61,7 +66,7 @@ CurlHttpClient::SendRequestAndBlock(const std::string& method,
 
   CHECK_EQ(CURLE_OK, curl_easy_setopt(curl.get(), CURLOPT_HTTPHEADER, chunk));
 
-  if (!data.empty() || method == "POST") {
+  if (!data.empty() || method == Method::kPost) {
     CHECK_EQ(CURLE_OK,
              curl_easy_setopt(curl.get(), CURLOPT_POSTFIELDS, data.c_str()));
   }
@@ -80,18 +85,21 @@ CurlHttpClient::SendRequestAndBlock(const std::string& method,
   if (chunk)
     curl_slist_free_all(chunk);
 
+  ErrorPtr error;
   if (res != CURLE_OK) {
-    Error::AddTo(error, FROM_HERE, "curl", "curl_easy_perform_error",
+    Error::AddTo(&error, FROM_HERE, "curl", "curl_easy_perform_error",
                  curl_easy_strerror(res));
-    return nullptr;
+    return task_runner_->PostDelayedTask(
+        FROM_HERE, base::Bind(callback, nullptr, base::Passed(&error)), {});
   }
 
   const std::string kContentType = "\r\nContent-Type:";
   auto pos = response->content_type.find(kContentType);
   if (pos == std::string::npos) {
-    Error::AddTo(error, FROM_HERE, "curl", "no_content_header",
+    Error::AddTo(&error, FROM_HERE, "curl", "no_content_header",
                  "Content-Type header is missing");
-    return nullptr;
+    return task_runner_->PostDelayedTask(
+        FROM_HERE, base::Bind(callback, nullptr, base::Passed(&error)), {});
   }
   pos += kContentType.size();
   auto pos_end = response->content_type.find("\r\n", pos);
@@ -103,44 +111,9 @@ CurlHttpClient::SendRequestAndBlock(const std::string& method,
 
   CHECK_EQ(CURLE_OK, curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE,
                                        &response->status));
-  return std::move(response);
-}
 
-int CurlHttpClient::SendRequest(const std::string& method,
-                                const std::string& url,
-                                const Headers& headers,
-                                const std::string& data,
-                                const SuccessCallback& success_callback,
-                                const ErrorCallback& error_callback) {
-  ++request_id_;
-  ErrorPtr error;
-  auto response = SendRequestAndBlock(method, url, headers, data, &error);
-  if (response) {
-    task_runner_->PostDelayedTask(
-        FROM_HERE, base::Bind(&CurlHttpClient::RunSuccessCallback,
-                              weak_ptr_factory_.GetWeakPtr(), success_callback,
-                              request_id_, base::Passed(&response)),
-        {});
-  } else {
-    task_runner_->PostDelayedTask(
-        FROM_HERE, base::Bind(&CurlHttpClient::RunErrorCallback,
-                              weak_ptr_factory_.GetWeakPtr(), error_callback,
-                              request_id_, base::Passed(&error)),
-        {});
-  }
-  return request_id_;
-}
-
-void CurlHttpClient::RunSuccessCallback(const SuccessCallback& success_callback,
-                                        int id,
-                                        std::unique_ptr<Response> response) {
-  success_callback.Run(id, *response);
-}
-
-void CurlHttpClient::RunErrorCallback(const ErrorCallback& error_callback,
-                                      int id,
-                                      ErrorPtr error) {
-  error_callback.Run(id, error.get());
+  task_runner_->PostDelayedTask(
+      FROM_HERE, base::Bind(callback, base::Passed(&response), nullptr), {});
 }
 
 }  // namespace examples

@@ -1,15 +1,14 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "src/base_api_handler.h"
 
 #include <base/bind.h>
+#include <weave/device.h>
 
-#include "src/commands/command_instance.h"
-#include "src/commands/command_manager.h"
+#include "src/commands/schema_constants.h"
 #include "src/device_registration_info.h"
-#include "src/states/state_manager.h"
 
 namespace weave {
 
@@ -20,36 +19,41 @@ const char kBaseStateDiscoveryEnabled[] = "base.localDiscoveryEnabled";
 const char kBaseStatePairingEnabled[] = "base.localPairingEnabled";
 }  // namespace
 
-BaseApiHandler::BaseApiHandler(
-    DeviceRegistrationInfo* device_info,
-    const std::shared_ptr<StateManager>& state_manager,
-    const std::shared_ptr<CommandManager>& command_manager)
-    : device_info_{device_info}, state_manager_{state_manager} {
+BaseApiHandler::BaseApiHandler(DeviceRegistrationInfo* device_info,
+                               Device* device)
+    : device_info_{device_info}, device_{device} {
   device_info_->GetMutableConfig()->AddOnChangedCallback(base::Bind(
       &BaseApiHandler::OnConfigChanged, weak_ptr_factory_.GetWeakPtr()));
 
   const auto& settings = device_info_->GetSettings();
   base::DictionaryValue state;
-  state.SetStringWithoutPathExpansion(kBaseStateFirmwareVersion,
-                                      settings.firmware_version);
-  CHECK(state_manager_->SetProperties(state, nullptr));
+  state.SetString(kBaseStateFirmwareVersion, settings.firmware_version);
+  CHECK(device_->SetStateProperties(state, nullptr));
 
-  command_manager->AddCommandAddedCallback(base::Bind(
-      &BaseApiHandler::OnCommandAdded, weak_ptr_factory_.GetWeakPtr()));
+  device->AddCommandDefinitionsFromJson(R"({
+    "base": {
+      "updateBaseConfiguration": {},
+      "updateDeviceInfo": {}
+    }
+  })");
+
+  device_->AddCommandHandler(
+      "base.updateBaseConfiguration",
+      base::Bind(&BaseApiHandler::UpdateBaseConfiguration,
+                 weak_ptr_factory_.GetWeakPtr()));
+
+  device_->AddCommandHandler("base.updateDeviceInfo",
+                             base::Bind(&BaseApiHandler::UpdateDeviceInfo,
+                                        weak_ptr_factory_.GetWeakPtr()));
 }
 
-void BaseApiHandler::OnCommandAdded(Command* command) {
-  if (command->GetStatus() != CommandStatus::kQueued)
+void BaseApiHandler::UpdateBaseConfiguration(
+    const std::weak_ptr<Command>& cmd) {
+  auto command = cmd.lock();
+  if (!command)
     return;
-
-  if (command->GetName() == "base.updateBaseConfiguration")
-    return UpdateBaseConfiguration(command);
-
-  if (command->GetName() == "base.updateDeviceInfo")
-    return UpdateDeviceInfo(command);
-}
-
-void BaseApiHandler::UpdateBaseConfiguration(Command* command) {
+  CHECK(command->GetState() == Command::State::kQueued)
+      << EnumToString(command->GetState());
   command->SetProgress(base::DictionaryValue{}, nullptr);
 
   const auto& settings = device_info_->GetSettings();
@@ -65,28 +69,37 @@ void BaseApiHandler::UpdateBaseConfiguration(Command* command) {
 
   AuthScope auth_scope{AuthScope::kNone};
   if (!StringToEnum(anonymous_access_role, &auth_scope)) {
-    return command->Abort();
+    ErrorPtr error;
+    Error::AddToPrintf(&error, FROM_HERE, errors::commands::kDomain,
+                       errors::commands::kInvalidPropValue,
+                       "Invalid localAnonymousAccessMaxRole value '%s'",
+                       anonymous_access_role.c_str());
+    command->Abort(error.get(), nullptr);
+    return;
   }
 
   device_info_->UpdateBaseConfig(auth_scope, discovery_enabled,
                                  pairing_enabled);
 
-  command->Done();
+  command->Complete({}, nullptr);
 }
 
 void BaseApiHandler::OnConfigChanged(const Settings& settings) {
   base::DictionaryValue state;
-  state.SetStringWithoutPathExpansion(
-      kBaseStateAnonymousAccessRole,
-      EnumToString(settings.local_anonymous_access_role));
-  state.SetBooleanWithoutPathExpansion(kBaseStateDiscoveryEnabled,
-                                       settings.local_discovery_enabled);
-  state.SetBooleanWithoutPathExpansion(kBaseStatePairingEnabled,
-                                       settings.local_pairing_enabled);
-  state_manager_->SetProperties(state, nullptr);
+  state.SetString(kBaseStateAnonymousAccessRole,
+                  EnumToString(settings.local_anonymous_access_role));
+  state.SetBoolean(kBaseStateDiscoveryEnabled,
+                   settings.local_discovery_enabled);
+  state.SetBoolean(kBaseStatePairingEnabled, settings.local_pairing_enabled);
+  device_->SetStateProperties(state, nullptr);
 }
 
-void BaseApiHandler::UpdateDeviceInfo(Command* command) {
+void BaseApiHandler::UpdateDeviceInfo(const std::weak_ptr<Command>& cmd) {
+  auto command = cmd.lock();
+  if (!command)
+    return;
+  CHECK(command->GetState() == Command::State::kQueued)
+      << EnumToString(command->GetState());
   command->SetProgress(base::DictionaryValue{}, nullptr);
 
   const auto& settings = device_info_->GetSettings();
@@ -100,7 +113,7 @@ void BaseApiHandler::UpdateDeviceInfo(Command* command) {
   parameters->GetString("location", &location);
 
   device_info_->UpdateDeviceInfo(name, description, location);
-  command->Done();
+  command->Complete({}, nullptr);
 }
 
 }  // namespace weave

@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -16,39 +16,57 @@
 #include "src/commands/schema_constants.h"
 #include "src/commands/schema_utils.h"
 #include "src/json_error_codes.h"
+#include "src/utils.h"
 
 namespace weave {
 
 namespace {
 
-const EnumToStringMap<CommandStatus>::Map kMapStatus[] = {
-    {CommandStatus::kQueued, "queued"},
-    {CommandStatus::kInProgress, "inProgress"},
-    {CommandStatus::kPaused, "paused"},
-    {CommandStatus::kError, "error"},
-    {CommandStatus::kDone, "done"},
-    {CommandStatus::kCancelled, "cancelled"},
-    {CommandStatus::kAborted, "aborted"},
-    {CommandStatus::kExpired, "expired"},
+const EnumToStringMap<Command::State>::Map kMapStatus[] = {
+    {Command::State::kQueued, "queued"},
+    {Command::State::kInProgress, "inProgress"},
+    {Command::State::kPaused, "paused"},
+    {Command::State::kError, "error"},
+    {Command::State::kDone, "done"},
+    {Command::State::kCancelled, "cancelled"},
+    {Command::State::kAborted, "aborted"},
+    {Command::State::kExpired, "expired"},
 };
 
-const EnumToStringMap<CommandOrigin>::Map kMapOrigin[] = {
-    {CommandOrigin::kLocal, "local"},
-    {CommandOrigin::kCloud, "cloud"},
+const EnumToStringMap<Command::Origin>::Map kMapOrigin[] = {
+    {Command::Origin::kLocal, "local"},
+    {Command::Origin::kCloud, "cloud"},
 };
+
+bool ReportDestroyedError(ErrorPtr* error) {
+  Error::AddTo(error, FROM_HERE, errors::commands::kDomain,
+               errors::commands::kCommandDestroyed,
+               "Command has been destroyed");
+  return false;
+}
+
+bool ReportInvalidStateTransition(ErrorPtr* error,
+                                  Command::State from,
+                                  Command::State to) {
+  Error::AddToPrintf(error, FROM_HERE, errors::commands::kDomain,
+                     errors::commands::kInvalidState,
+                     "State switch impossible: '%s' -> '%s'",
+                     EnumToString(from).c_str(), EnumToString(to).c_str());
+  return false;
+}
 
 }  // namespace
 
 template <>
-LIBWEAVE_EXPORT EnumToStringMap<CommandStatus>::EnumToStringMap()
+LIBWEAVE_EXPORT EnumToStringMap<Command::State>::EnumToStringMap()
     : EnumToStringMap(kMapStatus) {}
 
 template <>
-LIBWEAVE_EXPORT EnumToStringMap<CommandOrigin>::EnumToStringMap()
+LIBWEAVE_EXPORT EnumToStringMap<Command::Origin>::EnumToStringMap()
     : EnumToStringMap(kMapOrigin) {}
 
 CommandInstance::CommandInstance(const std::string& name,
-                                 CommandOrigin origin,
+                                 Command::Origin origin,
                                  const CommandDefinition* command_definition,
                                  const ValueMap& parameters)
     : name_{name},
@@ -70,11 +88,11 @@ const std::string& CommandInstance::GetName() const {
   return name_;
 }
 
-CommandStatus CommandInstance::GetStatus() const {
-  return status_;
+Command::State CommandInstance::GetState() const {
+  return state_;
 }
 
-CommandOrigin CommandInstance::GetOrigin() const {
+Command::Origin CommandInstance::GetOrigin() const {
   return origin_;
 }
 
@@ -90,8 +108,14 @@ std::unique_ptr<base::DictionaryValue> CommandInstance::GetResults() const {
   return TypedValueToJson(results_);
 }
 
+const Error* CommandInstance::GetError() const {
+  return error_.get();
+}
+
 bool CommandInstance::SetProgress(const base::DictionaryValue& progress,
                                   ErrorPtr* error) {
+  if (!command_definition_)
+    return ReportDestroyedError(error);
   ObjectPropType obj_prop_type;
   obj_prop_type.SetObjectSchema(command_definition_->GetProgress()->Clone());
 
@@ -100,16 +124,21 @@ bool CommandInstance::SetProgress(const base::DictionaryValue& progress,
     return false;
 
   // Change status even if progress unchanged, e.g. 0% -> 0%.
-  SetStatus(CommandStatus::kInProgress);
+  if (!SetStatus(State::kInProgress, error))
+    return false;
+
   if (obj != progress_) {
     progress_ = obj;
     FOR_EACH_OBSERVER(Observer, observers_, OnProgressChanged());
   }
+
   return true;
 }
 
-bool CommandInstance::SetResults(const base::DictionaryValue& results,
-                                 ErrorPtr* error) {
+bool CommandInstance::Complete(const base::DictionaryValue& results,
+                               ErrorPtr* error) {
+  if (!command_definition_)
+    return ReportDestroyedError(error);
   ObjectPropType obj_prop_type;
   obj_prop_type.SetObjectSchema(command_definition_->GetResults()->Clone());
 
@@ -121,7 +150,17 @@ bool CommandInstance::SetResults(const base::DictionaryValue& results,
     results_ = obj;
     FOR_EACH_OBSERVER(Observer, observers_, OnResultsChanged());
   }
-  return true;
+  // Change status even if result is unchanged.
+  bool result = SetStatus(State::kDone, error);
+  RemoveFromQueue();
+  // The command will be destroyed after that, so do not access any members.
+  return result;
+}
+
+bool CommandInstance::SetError(const Error* command_error, ErrorPtr* error) {
+  error_ = command_error ? command_error->Clone() : nullptr;
+  FOR_EACH_OBSERVER(Observer, observers_, OnErrorChanged());
+  return SetStatus(State::kError, error);
 }
 
 namespace {
@@ -168,7 +207,7 @@ bool GetCommandParameters(const base::DictionaryValue* json,
 
 std::unique_ptr<CommandInstance> CommandInstance::FromJson(
     const base::Value* value,
-    CommandOrigin origin,
+    Command::Origin origin,
     const CommandDictionary& dictionary,
     std::string* command_id,
     ErrorPtr* error) {
@@ -235,7 +274,11 @@ std::unique_ptr<base::DictionaryValue> CommandInstance::ToJson() const {
             TypedValueToJson(progress_).release());
   json->Set(commands::attributes::kCommand_Results,
             TypedValueToJson(results_).release());
-  json->SetString(commands::attributes::kCommand_State, EnumToString(status_));
+  json->SetString(commands::attributes::kCommand_State, EnumToString(state_));
+  if (error_) {
+    json->Set(commands::attributes::kCommand_Error,
+              ErrorInfoToJson(*error_).release());
+  }
 
   return json;
 }
@@ -248,29 +291,46 @@ void CommandInstance::RemoveObserver(Observer* observer) {
   observers_.RemoveObserver(observer);
 }
 
-void CommandInstance::Abort() {
-  SetStatus(CommandStatus::kAborted);
-  RemoveFromQueue();
-  // The command will be destroyed after that, so do not access any members.
+bool CommandInstance::Pause(ErrorPtr* error) {
+  return SetStatus(State::kPaused, error);
 }
 
-void CommandInstance::Cancel() {
-  SetStatus(CommandStatus::kCancelled);
+bool CommandInstance::Abort(const Error* command_error, ErrorPtr* error) {
+  error_ = command_error ? command_error->Clone() : nullptr;
+  FOR_EACH_OBSERVER(Observer, observers_, OnErrorChanged());
+  bool result = SetStatus(State::kAborted, error);
   RemoveFromQueue();
   // The command will be destroyed after that, so do not access any members.
+  return result;
 }
 
-void CommandInstance::Done() {
-  SetStatus(CommandStatus::kDone);
+bool CommandInstance::Cancel(ErrorPtr* error) {
+  bool result = SetStatus(State::kCancelled, error);
   RemoveFromQueue();
   // The command will be destroyed after that, so do not access any members.
+  return result;
 }
 
-void CommandInstance::SetStatus(CommandStatus status) {
-  if (status != status_) {
-    status_ = status;
-    FOR_EACH_OBSERVER(Observer, observers_, OnStatusChanged());
+bool CommandInstance::SetStatus(Command::State status, ErrorPtr* error) {
+  if (status == state_)
+    return true;
+  if (status == State::kQueued)
+    return ReportInvalidStateTransition(error, state_, status);
+  switch (state_) {
+    case State::kDone:
+    case State::kCancelled:
+    case State::kAborted:
+    case State::kExpired:
+      return ReportInvalidStateTransition(error, state_, status);
+    case State::kQueued:
+    case State::kInProgress:
+    case State::kPaused:
+    case State::kError:
+      break;
   }
+  state_ = status;
+  FOR_EACH_OBSERVER(Observer, observers_, OnStateChanged());
+  return true;
 }
 
 void CommandInstance::RemoveFromQueue() {

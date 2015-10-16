@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -32,9 +32,9 @@ bool FakeTaskRunner::RunOnce() {
   return true;
 }
 
-void FakeTaskRunner::Run() {
+void FakeTaskRunner::Run(size_t number_of_iterations) {
   break_ = false;
-  for (size_t i = 0; i < 1000 && !break_ && RunOnce(); ++i) {
+  for (size_t i = 0; i < number_of_iterations && !break_ && RunOnce(); ++i) {
   }
 }
 

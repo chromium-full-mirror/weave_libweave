@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -31,33 +31,43 @@ class CommandQueue;
 
 class CommandInstance final : public Command {
  public:
+  class Observer {
+   public:
+    virtual void OnCommandDestroyed() = 0;
+    virtual void OnErrorChanged() = 0;
+    virtual void OnProgressChanged() = 0;
+    virtual void OnResultsChanged() = 0;
+    virtual void OnStateChanged() = 0;
+
+   protected:
+    virtual ~Observer() = default;
+  };
+
   // Construct a command instance given the full command |name| which must
   // be in format "<package_name>.<command_name>", a command |category| and
   // a list of parameters and their values specified in |parameters|.
   CommandInstance(const std::string& name,
-                  CommandOrigin origin,
+                  Command::Origin origin,
                   const CommandDefinition* command_definition,
                   const ValueMap& parameters);
   ~CommandInstance() override;
 
   // Command overrides.
-  std::unique_ptr<base::DictionaryValue> ToJson() const override;
-  void AddObserver(Observer* observer) override;
-  void RemoveObserver(Observer* observer) override;
   const std::string& GetID() const override;
   const std::string& GetName() const override;
-  CommandStatus GetStatus() const override;
-  CommandOrigin GetOrigin() const override;
+  Command::State GetState() const override;
+  Command::Origin GetOrigin() const override;
   std::unique_ptr<base::DictionaryValue> GetParameters() const override;
   std::unique_ptr<base::DictionaryValue> GetProgress() const override;
   std::unique_ptr<base::DictionaryValue> GetResults() const override;
+  const Error* GetError() const override;
   bool SetProgress(const base::DictionaryValue& progress,
                    ErrorPtr* error) override;
-  bool SetResults(const base::DictionaryValue& results,
-                  ErrorPtr* error) override;
-  void Abort() override;
-  void Cancel() override;
-  void Done() override;
+  bool Complete(const base::DictionaryValue& results, ErrorPtr* error) override;
+  bool Pause(ErrorPtr* error) override;
+  bool SetError(const Error* command_error, ErrorPtr* error) override;
+  bool Abort(const Error* command_error, ErrorPtr* error) override;
+  bool Cancel(ErrorPtr* error) override;
 
   // Returns command definition.
   const CommandDefinition* GetCommandDefinition() const {
@@ -74,21 +84,32 @@ class CommandInstance final : public Command {
   // This is used to report parse failures back to the server.
   static std::unique_ptr<CommandInstance> FromJson(
       const base::Value* value,
-      CommandOrigin origin,
+      Command::Origin origin,
       const CommandDictionary& dictionary,
       std::string* command_id,
       ErrorPtr* error);
 
+  std::unique_ptr<base::DictionaryValue> ToJson() const;
+
   // Sets the command ID (normally done by CommandQueue when the command
   // instance is added to it).
   void SetID(const std::string& id) { id_ = id; }
+
+  void AddObserver(Observer* observer);
+  void RemoveObserver(Observer* observer);
+
   // Sets the pointer to queue this command is part of.
-  void SetCommandQueue(CommandQueue* queue) { queue_ = queue; }
+  void AttachToQueue(CommandQueue* queue) { queue_ = queue; }
+  void DetachFromQueue() {
+    observers_.Clear();
+    queue_ = nullptr;
+    command_definition_ = nullptr;
+  }
 
  private:
   // Helper function to update the command status.
   // Used by Abort(), Cancel(), Done() methods.
-  void SetStatus(CommandStatus status);
+  bool SetStatus(Command::State status, ErrorPtr* error);
   // Helper method that removes this command from the command queue.
   // Note that since the command queue owns the lifetime of the command instance
   // object, removing a command from the queue will also destroy it.
@@ -99,17 +120,19 @@ class CommandInstance final : public Command {
   // Full command name as "<package_name>.<command_name>".
   std::string name_;
   // The origin of the command, either "local" or "cloud".
-  CommandOrigin origin_ = CommandOrigin::kLocal;
+  Command::Origin origin_ = Command::Origin::kLocal;
   // Command definition.
-  const CommandDefinition* command_definition_;
+  const CommandDefinition* command_definition_{nullptr};
   // Command parameters and their values.
   ValueMap parameters_;
   // Current command execution progress.
   ValueMap progress_;
   // Command results.
   ValueMap results_;
-  // Current command status.
-  CommandStatus status_ = CommandStatus::kQueued;
+  // Current command state.
+  Command::State state_ = Command::State::kQueued;
+  // Error encountered during execution of the command.
+  ErrorPtr error_;
   // Command observers.
   base::ObserverList<Observer> observers_;
   // Pointer to the command queue this command instance is added to.

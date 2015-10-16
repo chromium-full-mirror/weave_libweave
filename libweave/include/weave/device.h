@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -45,14 +45,23 @@ class Device {
   virtual void AddSettingsChangedCallback(
       const SettingsChangedCallback& callback) = 0;
 
-  // Callback type for AddCommandAddedCallback and AddCommandRemovedCallback.
-  using CommandCallback = base::Callback<void(Command*)>;
+  // Adds provided commands definitions. Can be called multiple times with
+  // condition that definitions do not conflict.
+  // Invalid value is fatal.
+  virtual void AddCommandDefinitionsFromJson(const std::string& json) = 0;
+  virtual void AddCommandDefinitions(const base::DictionaryValue& dict) = 0;
 
-  // Adds notification callback for a new command being added to the queue.
-  virtual void AddCommandAddedCallback(const CommandCallback& callback) = 0;
+  // Callback type for AddCommandHandler.
+  using CommandHandlerCallback =
+      base::Callback<void(const std::weak_ptr<Command>& command)>;
 
-  // Adds notification callback for a command being removed from the queue.
-  virtual void AddCommandRemovedCallback(const CommandCallback& callback) = 0;
+  // Sets handler for new commands added to the queue.
+  // |command_name| is the full command name of the command to handle. e.g.
+  // "base.reboot". Each command can have no more than one handler.
+  // Empty |command_name| sets default handler for all unhanded commands.
+  // No new command handlers can be set after default handler was set.
+  virtual void AddCommandHandler(const std::string& command_name,
+                                 const CommandHandlerCallback& callback) = 0;
 
   // Adds a new command to the command queue.
   virtual bool AddCommand(const base::DictionaryValue& command,
@@ -67,6 +76,24 @@ class Device {
   // Sets callback which is called when stat is changed.
   virtual void AddStateChangedCallback(const base::Closure& callback) = 0;
 
+  // Adds provided state definitions. Can be called multiple times with
+  // condition that definitions do not conflict.
+  // Invalid value is fatal.
+  virtual void AddStateDefinitionsFromJson(const std::string& json) = 0;
+  virtual void AddStateDefinitions(const base::DictionaryValue& dict) = 0;
+
+  // Sets value of multiple properties of the state.
+  // It's recommended to call this to initialize state defined by
+  // AddStateDefinitions.
+  // Example:
+  //   device->SetStatePropertiesFromJson("{'base':{'firmwareVersion':'123'}}")
+  // Method completely replaces properties included |json| or |dict|.
+  // Properties of the state not included |json| or |dict| will stay unchanged.
+  virtual bool SetStatePropertiesFromJson(const std::string& json,
+                                          ErrorPtr* error) = 0;
+  virtual bool SetStateProperties(const base::DictionaryValue& dict,
+                                  ErrorPtr* error) = 0;
+
   // Returns value of the single property.
   // |name| is full property name, including package name. e.g. "base.network".
   virtual std::unique_ptr<base::Value> GetStateProperty(
@@ -77,10 +104,6 @@ class Device {
   virtual bool SetStateProperty(const std::string& name,
                                 const base::Value& value,
                                 ErrorPtr* error) = 0;
-
-  // Updates a multiple property values.
-  virtual bool SetStateProperties(const base::DictionaryValue& property_set,
-                                  ErrorPtr* error) = 0;
 
   // Returns aggregated state properties across all registered packages.
   virtual std::unique_ptr<base::DictionaryValue> GetState() const = 0;
@@ -95,10 +118,10 @@ class Device {
   virtual void AddGcdStateChangedCallback(
       const GcdStateChangedCallback& callback) = 0;
 
-  // Registers the device. Returns a device ID on success.
+  // Registers the device.
   // This is testing method and should not be used by applications.
-  virtual std::string Register(const std::string& ticket_id,
-                               ErrorPtr* error) = 0;
+  virtual void Register(const std::string& ticket_id,
+                        const DoneCallback& callback) = 0;
 
   // Handler should display pin code to the user.
   using PairingBeginCallback =

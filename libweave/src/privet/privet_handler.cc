@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -23,6 +23,7 @@
 #include "src/privet/security_delegate.h"
 #include "src/privet/wifi_delegate.h"
 #include "src/string_utils.h"
+#include "src/utils.h"
 
 namespace weave {
 namespace privet {
@@ -90,8 +91,6 @@ const char kAuthScopeKey[] = "scope";
 
 const char kAuthorizationHeaderPrefix[] = "Privet";
 
-const char kErrorCodeKey[] = "code";
-const char kErrorMessageKey[] = "message";
 const char kErrorDebugInfoKey[] = "debugInfo";
 
 const char kSetupStartSsidKey[] = "ssid";
@@ -156,13 +155,6 @@ std::string GetAuthTokenFromAuthHeader(const std::string& auth_header) {
   return SplitAtFirst(auth_header, " ", true).second;
 }
 
-std::unique_ptr<base::DictionaryValue> ErrorInfoToJson(const Error& error) {
-  std::unique_ptr<base::DictionaryValue> output{new base::DictionaryValue};
-  output->SetString(kErrorMessageKey, error.GetMessage());
-  output->SetString(kErrorCodeKey, error.GetCode());
-  return output;
-}
-
 // Creates JSON similar to GCD server error format.
 std::unique_ptr<base::DictionaryValue> ErrorToJson(const Error& error) {
   std::unique_ptr<base::DictionaryValue> output{ErrorInfoToJson(error)};
@@ -182,7 +174,7 @@ std::unique_ptr<base::DictionaryValue> ErrorToJson(const Error& error) {
 }
 
 template <class T>
-void SetState(const T& state, base::DictionaryValue* parent) {
+void SetStateProperties(const T& state, base::DictionaryValue* parent) {
   if (!state.error()) {
     parent->SetString(kStatusKey, EnumToString(state.status()));
     return;
@@ -206,23 +198,20 @@ void ReturnError(const Error& error,
 }
 
 void OnCommandRequestSucceeded(const PrivetHandler::RequestCallback& callback,
-                               const base::DictionaryValue& output) {
-  callback.Run(http::kOk, output);
-}
+                               const base::DictionaryValue& output,
+                               ErrorPtr error) {
+  if (!error)
+    return callback.Run(http::kOk, output);
 
-void OnCommandRequestFailed(const PrivetHandler::RequestCallback& callback,
-                            const Error* error) {
   if (error->HasError("gcd", "unknown_command")) {
-    ErrorPtr new_error = error->Clone();
-    Error::AddTo(&new_error, FROM_HERE, errors::kDomain, errors::kNotFound,
+    Error::AddTo(&error, FROM_HERE, errors::kDomain, errors::kNotFound,
                  "Unknown command ID");
-    return ReturnError(*new_error, callback);
+    return ReturnError(*error, callback);
   }
   if (error->HasError("gcd", "access_denied")) {
-    ErrorPtr new_error = error->Clone();
-    Error::AddTo(&new_error, FROM_HERE, errors::kDomain, errors::kAccessDenied,
+    Error::AddTo(&error, FROM_HERE, errors::kDomain, errors::kAccessDenied,
                  error->GetMessage());
-    return ReturnError(*new_error, callback);
+    return ReturnError(*error, callback);
   }
   return ReturnError(*error, callback);
 }
@@ -330,7 +319,7 @@ std::unique_ptr<base::DictionaryValue> CreateWifiSection(
     DCHECK(!state.IsStatusEqual(ConnectionState::kOnline));
     result->SetString(kInfoWifiHostedSsidKey, hosted_ssid);
   }
-  SetState(state, result.get());
+  SetStateProperties(state, result.get());
   return result;
 }
 
@@ -338,7 +327,7 @@ std::unique_ptr<base::DictionaryValue> CreateGcdSection(
     const CloudDelegate& cloud) {
   std::unique_ptr<base::DictionaryValue> gcd(new base::DictionaryValue());
   gcd->SetString(kInfoIdKey, cloud.GetCloudId());
-  SetState(cloud.GetConnectionState(), gcd.get());
+  SetStateProperties(cloud.GetConnectionState(), gcd.get());
   return gcd;
 }
 
@@ -350,6 +339,18 @@ AuthScope GetAnonymousMaxScope(const CloudDelegate& cloud,
 }
 
 }  // namespace
+
+std::vector<std::string> PrivetHandler::GetHttpPaths() const {
+  // TODO(vitalybuka): Should be subset only.
+  return GetHttpsPaths();
+}
+
+std::vector<std::string> PrivetHandler::GetHttpsPaths() const {
+  std::vector<std::string> result;
+  for (const auto& pair : handlers_)
+    result.push_back(pair.first);
+  return result;
+}
 
 PrivetHandler::PrivetHandler(CloudDelegate* cloud,
                              DeviceDelegate* device,
@@ -718,7 +719,7 @@ void PrivetHandler::ReplyWithSetupStatus(
   if (!state.IsStatusEqual(SetupState::kNone)) {
     base::DictionaryValue* gcd = new base::DictionaryValue;
     output.Set(kGcdKey, gcd);
-    SetState(state, gcd);
+    SetStateProperties(state, gcd);
     if (state.IsStatusEqual(SetupState::kSuccess))
       gcd->SetString(kInfoIdKey, cloud_->GetCloudId());
   }
@@ -728,7 +729,7 @@ void PrivetHandler::ReplyWithSetupStatus(
     if (!state.IsStatusEqual(SetupState::kNone)) {
       base::DictionaryValue* wifi = new base::DictionaryValue;
       output.Set(kWifiKey, wifi);
-      SetState(state, wifi);
+      SetStateProperties(state, wifi);
       if (state.IsStatusEqual(SetupState::kSuccess))
         wifi->SetString(kInfoWifiSsidKey, wifi_->GetCurrentlyConnectedSsid());
     }
@@ -764,8 +765,7 @@ void PrivetHandler::HandleCommandsExecute(const base::DictionaryValue& input,
                                           const UserInfo& user_info,
                                           const RequestCallback& callback) {
   cloud_->AddCommand(input, user_info,
-                     base::Bind(&OnCommandRequestSucceeded, callback),
-                     base::Bind(&OnCommandRequestFailed, callback));
+                     base::Bind(&OnCommandRequestSucceeded, callback));
 }
 
 void PrivetHandler::HandleCommandsStatus(const base::DictionaryValue& input,
@@ -780,16 +780,14 @@ void PrivetHandler::HandleCommandsStatus(const base::DictionaryValue& input,
     return ReturnError(*error, callback);
   }
   cloud_->GetCommand(id, user_info,
-                     base::Bind(&OnCommandRequestSucceeded, callback),
-                     base::Bind(&OnCommandRequestFailed, callback));
+                     base::Bind(&OnCommandRequestSucceeded, callback));
 }
 
 void PrivetHandler::HandleCommandsList(const base::DictionaryValue& input,
                                        const UserInfo& user_info,
                                        const RequestCallback& callback) {
   cloud_->ListCommands(user_info,
-                       base::Bind(&OnCommandRequestSucceeded, callback),
-                       base::Bind(&OnCommandRequestFailed, callback));
+                       base::Bind(&OnCommandRequestSucceeded, callback));
 }
 
 void PrivetHandler::HandleCommandsCancel(const base::DictionaryValue& input,
@@ -804,8 +802,7 @@ void PrivetHandler::HandleCommandsCancel(const base::DictionaryValue& input,
     return ReturnError(*error, callback);
   }
   cloud_->CancelCommand(id, user_info,
-                        base::Bind(&OnCommandRequestSucceeded, callback),
-                        base::Bind(&OnCommandRequestFailed, callback));
+                        base::Bind(&OnCommandRequestSucceeded, callback));
 }
 
 }  // namespace privet

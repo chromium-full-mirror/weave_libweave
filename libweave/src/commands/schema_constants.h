@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -28,6 +28,8 @@ extern const char kInvalidCommandName[];
 extern const char kCommandFailed[];
 extern const char kInvalidCommandVisibility[];
 extern const char kInvalidMinimalRole[];
+extern const char kCommandDestroyed[];
+extern const char kInvalidState[];
 }  // namespace commands
 }  // namespace errors
 
@@ -59,15 +61,13 @@ extern const char kCommand_Parameters[];
 extern const char kCommand_Progress[];
 extern const char kCommand_Results[];
 extern const char kCommand_State[];
+extern const char kCommand_Error[];
 
 extern const char kCommand_Role[];
 extern const char kCommand_Role_Manager[];
 extern const char kCommand_Role_Owner[];
 extern const char kCommand_Role_User[];
 extern const char kCommand_Role_Viewer[];
-
-extern const char kCommand_ErrorCode[];
-extern const char kCommand_ErrorMessage[];
 
 extern const char kCommand_Visibility[];
 extern const char kCommand_Visibility_None[];

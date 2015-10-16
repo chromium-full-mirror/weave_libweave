@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,7 +6,6 @@
 
 #include <base/logging.h>
 #include <base/values.h>
-#include <weave/provider/config_store.h>
 
 #include "src/json_error_codes.h"
 #include "src/states/error_codes.h"
@@ -54,22 +53,14 @@ void StateManager::AddChangedCallback(const base::Closure& callback) {
   callback.Run();  // Force to read current state.
 }
 
-void StateManager::Startup(provider::ConfigStore* config_store) {
+void StateManager::Startup() {
   LOG(INFO) << "Initializing StateManager.";
 
   // Load standard device state definition.
   CHECK(LoadBaseStateDefinition(kBaseStateDefs, nullptr));
 
-  // Load component-specific device state definitions.
-  for (const auto& state_def : config_store->LoadStateDefs())
-    CHECK(LoadStateDefinition(state_def, nullptr));
-
   // Load standard device state defaults.
-  CHECK(LoadStateDefaults(kBaseStateDefaults, nullptr));
-
-  // Load component-specific device state defaults.
-  for (const auto& json : config_store->LoadStateDefaults())
-    CHECK(LoadStateDefaults(json, nullptr));
+  CHECK(SetPropertiesFromJson(kBaseStateDefaults, nullptr));
 
   for (const auto& cb : on_changed_)
     cb.Run();
@@ -83,23 +74,6 @@ std::unique_ptr<base::DictionaryValue> StateManager::GetState() const {
     dict->SetWithoutPathExpansion(pair.first, pkg_value.release());
   }
   return dict;
-}
-
-bool StateManager::SetProperties(const base::DictionaryValue& property_set,
-                                 ErrorPtr* error) {
-  base::Time timestamp = base::Time::Now();
-  bool all_success = true;
-  for (base::DictionaryValue::Iterator it(property_set); !it.IsAtEnd();
-       it.Advance()) {
-    if (!SetPropertyValue(it.key(), it.value(), timestamp, error)) {
-      // Remember that an error occurred but keep going and update the rest of
-      // the properties if possible.
-      all_success = false;
-    }
-  }
-  for (const auto& cb : on_changed_)
-    cb.Run();
-  return all_success;
 }
 
 bool StateManager::SetProperty(const std::string& name,
@@ -176,8 +150,8 @@ void StateManager::NotifyStateUpdatedOnServer(
 
 bool StateManager::LoadStateDefinition(const base::DictionaryValue& dict,
                                        ErrorPtr* error) {
-  base::DictionaryValue::Iterator iter(dict);
-  while (!iter.IsAtEnd()) {
+  for (base::DictionaryValue::Iterator iter(dict); !iter.IsAtEnd();
+       iter.Advance()) {
     std::string package_name = iter.key();
     if (package_name.empty()) {
       Error::AddTo(error, FROM_HERE, errors::kErrorDomain,
@@ -196,14 +170,13 @@ bool StateManager::LoadStateDefinition(const base::DictionaryValue& dict,
     CHECK(package) << "Unable to create state package " << package_name;
     if (!package->AddSchemaFromJson(package_dict, error))
       return false;
-    iter.Advance();
   }
 
   return true;
 }
 
-bool StateManager::LoadStateDefinition(const std::string& json,
-                                       ErrorPtr* error) {
+bool StateManager::LoadStateDefinitionFromJson(const std::string& json,
+                                               ErrorPtr* error) {
   std::unique_ptr<const base::DictionaryValue> dict = LoadJsonDict(json, error);
   if (!dict)
     return false;
@@ -230,44 +203,49 @@ bool StateManager::LoadBaseStateDefinition(const std::string& json,
   return true;
 }
 
-bool StateManager::LoadStateDefaults(const base::DictionaryValue& dict,
-                                     ErrorPtr* error) {
-  base::DictionaryValue::Iterator iter(dict);
-  while (!iter.IsAtEnd()) {
-    std::string package_name = iter.key();
-    if (package_name.empty()) {
+bool StateManager::SetProperties(const base::DictionaryValue& dict,
+                                 ErrorPtr* error) {
+  base::Time timestamp = base::Time::Now();
+  bool all_success = true;
+  for (base::DictionaryValue::Iterator iter(dict); !iter.IsAtEnd();
+       iter.Advance()) {
+    if (iter.key().empty()) {
       Error::AddTo(error, FROM_HERE, errors::kErrorDomain,
                    errors::kInvalidPackageError, "State package name is empty");
-      return false;
+      all_success = false;
+      continue;
     }
+
     const base::DictionaryValue* package_dict = nullptr;
     if (!iter.value().GetAsDictionary(&package_dict)) {
       Error::AddToPrintf(error, FROM_HERE, errors::json::kDomain,
                          errors::json::kObjectExpected,
                          "State package '%s' must be an object",
-                         package_name.c_str());
-      return false;
+                         iter.key().c_str());
+      all_success = false;
+      continue;
     }
-    StatePackage* package = FindPackage(package_name);
-    if (package == nullptr) {
-      Error::AddToPrintf(error, FROM_HERE, errors::json::kDomain,
-                         errors::json::kObjectExpected,
-                         "Providing values for undefined state package '%s'",
-                         package_name.c_str());
-      return false;
+
+    for (base::DictionaryValue::Iterator it_prop(*package_dict);
+         !it_prop.IsAtEnd(); it_prop.Advance()) {
+      if (!SetPropertyValue(iter.key() + "." + it_prop.key(), it_prop.value(),
+                            timestamp, error)) {
+        all_success = false;
+        continue;
+      }
     }
-    if (!package->AddValuesFromJson(package_dict, error))
-      return false;
-    iter.Advance();
   }
-  return true;
+  for (const auto& cb : on_changed_)
+    cb.Run();
+  return all_success;
 }
 
-bool StateManager::LoadStateDefaults(const std::string& json, ErrorPtr* error) {
+bool StateManager::SetPropertiesFromJson(const std::string& json,
+                                         ErrorPtr* error) {
   std::unique_ptr<const base::DictionaryValue> dict = LoadJsonDict(json, error);
   if (!dict)
     return false;
-  if (!LoadStateDefaults(*dict, error)) {
+  if (!SetProperties(*dict, error)) {
     Error::AddToPrintf(error, FROM_HERE, errors::kErrorDomain,
                        errors::kSchemaError, "Failed to load defaults: '%s'",
                        json.c_str());

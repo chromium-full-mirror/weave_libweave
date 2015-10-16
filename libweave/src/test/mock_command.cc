@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -24,10 +24,6 @@ std::unique_ptr<base::DictionaryValue> MockCommand::GetProgress() const {
 
 std::unique_ptr<base::DictionaryValue> MockCommand::GetResults() const {
   return CreateDictionaryValue(MockGetResults());
-}
-
-std::unique_ptr<base::DictionaryValue> MockCommand::ToJson() const {
-  return CreateDictionaryValue(MockToJson());
 }
 
 }  // namespace test

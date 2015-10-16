@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -26,10 +26,6 @@ class Time;
 
 namespace weave {
 
-namespace provider {
-class ConfigStore;
-}
-
 // StateManager is the class that aggregates the device state fragments
 // provided by device daemons and makes the aggregate device state available
 // to the GCD cloud server and local clients.
@@ -39,8 +35,10 @@ class StateManager final {
   ~StateManager();
 
   void AddChangedCallback(const base::Closure& callback);
-  bool SetProperties(const base::DictionaryValue& property_set,
-                     ErrorPtr* error);
+  bool LoadStateDefinition(const base::DictionaryValue& dict, ErrorPtr* error);
+  bool LoadStateDefinitionFromJson(const std::string& json, ErrorPtr* error);
+  bool SetProperties(const base::DictionaryValue& dict, ErrorPtr* error);
+  bool SetPropertiesFromJson(const std::string& json, ErrorPtr* error);
   std::unique_ptr<base::Value> GetProperty(const std::string& name) const;
   bool SetProperty(const std::string& name,
                    const base::Value& value,
@@ -49,7 +47,7 @@ class StateManager final {
 
   // Initializes the state manager and load device state fragments.
   // Called by Buffet daemon at startup.
-  void Startup(provider::ConfigStore* config_store);
+  void Startup();
 
   // Returns the recorded state changes since last time this method has been
   // called.
@@ -75,24 +73,10 @@ class StateManager final {
                         const base::Time& timestamp,
                         ErrorPtr* error);
 
-  // Loads a device state fragment from a JSON object.
-  bool LoadStateDefinition(const base::DictionaryValue& dict,
-                           ErrorPtr* error);
-
-  // Loads a device state fragment JSON.
-  bool LoadStateDefinition(const std::string& json,
-                           ErrorPtr* error);
-
   // Loads the base device state fragment JSON. This state fragment
   // defines the standard state properties from the 'base' package as defined
   // by GCD specification.
   bool LoadBaseStateDefinition(const std::string& json, ErrorPtr* error);
-
-  // Loads state default values from JSON object.
-  bool LoadStateDefaults(const base::DictionaryValue& dict, ErrorPtr* error);
-
-  // Loads state default values from JSON.
-  bool LoadStateDefaults(const std::string& json, ErrorPtr* error);
 
   // Finds a package by its name. Returns nullptr if not found.
   StatePackage* FindPackage(const std::string& package_name);

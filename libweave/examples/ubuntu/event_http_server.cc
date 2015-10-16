@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -30,75 +30,49 @@ bufferevent* BuffetEventCallback(event_base* base, void* arg) {
       base, -1, SSL_new(ctx), BUFFEREVENT_SSL_ACCEPTING, BEV_OPT_CLOSE_ON_FREE);
 }
 
-class MemoryReadStream : public Stream {
- public:
-  MemoryReadStream(const std::vector<uint8_t>& data,
-                   provider::TaskRunner* task_runner)
-      : data_{data}, task_runner_{task_runner} {}
-
-  void Read(void* buffer,
-            size_t size_to_read,
-            const ReadSuccessCallback& success_callback,
-            const ErrorCallback& error_callback) override {
-    CHECK_LE(read_position_, data_.size());
-    size_t size_read = std::min(size_to_read, data_.size() - read_position_);
-    if (size_read > 0)
-      memcpy(buffer, data_.data() + read_position_, size_read);
-    read_position_ += size_read;
-    success_callback.Run(size_read);
-  }
-
-  void Write(const void* buffer,
-             size_t size_to_write,
-             const SuccessCallback& success_callback,
-             const ErrorCallback& error_callback) override {
-    LOG(FATAL) << "Unsupported";
-  }
-
-  void CancelPendingOperations() override {}
-
- private:
-  std::vector<uint8_t> data_;
-  provider::TaskRunner* task_runner_;
-  size_t read_position_{0};
-};
-
 }  // namespace
 
 class HttpServerImpl::RequestImpl : public Request {
  public:
-  explicit RequestImpl(evhttp_request* req, provider::TaskRunner* task_runner)
-      : path_{evhttp_request_uri(req)}, task_runner_{task_runner} {
-    path_ = path_.substr(0, path_.find("?"));
-    path_ = path_.substr(0, path_.find("#"));
+  RequestImpl(evhttp_request* req, provider::TaskRunner* task_runner)
+      : task_runner_{task_runner} {
     req_.reset(req);
+    uri_ = evhttp_request_get_evhttp_uri(req_.get());
 
     data_.resize(evbuffer_get_length(req_->input_buffer));
-    evbuffer_remove(req_->input_buffer, data_.data(), data_.size());
+    evbuffer_remove(req_->input_buffer, &data_[0], data_.size());
   }
 
   ~RequestImpl() {}
 
-  const std::string& GetPath() const override { return path_; }
+  std::string GetPath() const override {
+    const char* path = evhttp_uri_get_path(uri_);
+    return path ? path : "";
+  }
   std::string GetFirstHeader(const std::string& name) const override {
     const char* header = evhttp_find_header(req_->input_headers, name.c_str());
     if (!header)
       return {};
     return header;
   }
-  const std::vector<uint8_t>& GetData() const override { return data_; }
-  std::unique_ptr<Stream> GetDataStream() const override {
-    return std::unique_ptr<Stream>{new MemoryReadStream{data_, task_runner_}};
+  std::string GetData() { return data_; }
+
+  void SendReply(int status_code,
+                 const std::string& data,
+                 const std::string& mime_type) override {
+    std::unique_ptr<evbuffer, decltype(&evbuffer_free)> buf{evbuffer_new(),
+                                                            &evbuffer_free};
+    evbuffer_add(buf.get(), data.data(), data.size());
+    evhttp_add_header(req_->output_headers, "Content-Type", mime_type.c_str());
+    evhttp_send_reply(req_.release(), status_code, "None", buf.get());
   }
 
-  evhttp_request* ReleaseHandler() { return req_.release(); }
-
  private:
-  std::vector<uint8_t> data_;
   std::unique_ptr<evhttp_request, decltype(&evhttp_cancel_request)> req_{
       nullptr, &evhttp_cancel_request};
-  std::string path_;
-  provider::TaskRunner* task_runner_;
+  provider::TaskRunner* task_runner_{nullptr};
+  std::string data_;
+  const evhttp_uri* uri_{nullptr};
 };
 
 HttpServerImpl::HttpServerImpl(EventTaskRunner* task_runner)
@@ -127,8 +101,6 @@ HttpServerImpl::HttpServerImpl(EventTaskRunner* task_runner)
   CHECK(httpsd_);
 
   evhttp_set_bevcb(httpsd_.get(), BuffetEventCallback, ctx_.get());
-  evhttp_set_gencb(httpd_.get(), ProcessRequestCallback, this);
-  evhttp_set_gencb(httpsd_.get(), ProcessRequestCallback, this);
 
   CHECK_EQ(0, evhttp_bind_socket(httpd_.get(), "0.0.0.0", GetHttpPort()));
   CHECK_EQ(0, evhttp_bind_socket(httpsd_.get(), "0.0.0.0", GetHttpsPort()));
@@ -175,38 +147,34 @@ void HttpServerImpl::NotFound(evhttp_request* req) {
 }
 
 void HttpServerImpl::ProcessRequest(evhttp_request* req) {
-  std::string path = evhttp_request_uri(req);
-  for (auto i = handlers_.rbegin(); i != handlers_.rend(); ++i) {
-    if (path.compare(0, i->first.size(), i->first) == 0) {
-      auto request = std::make_shared<RequestImpl>(req, task_runner_);
-      i->second.Run(*request,
-                    base::Bind(&HttpServerImpl::ProcessReply,
-                               weak_ptr_factory_.GetWeakPtr(), request));
-      return;
-    }
+  std::unique_ptr<RequestImpl> request{new RequestImpl{req, task_runner_}};
+  std::string path = request->GetPath();
+  auto it = handlers_.find(path);
+  if (it != handlers_.end()) {
+    return it->second.Run(std::move(request));
   }
   NotFound(req);
 }
+
 void HttpServerImpl::ProcessReply(std::shared_ptr<RequestImpl> request,
                                   int status_code,
                                   const std::string& data,
                                   const std::string& mime_type) {
-  std::unique_ptr<evbuffer, decltype(&evbuffer_free)> buf{evbuffer_new(),
-                                                          &evbuffer_free};
-  evbuffer_add(buf.get(), data.data(), data.size());
-  evhttp_request* req = request->ReleaseHandler();
-  evhttp_add_header(req->output_headers, "Content-Type", mime_type.c_str());
-  evhttp_send_reply(req, status_code, "None", buf.get());
+
 }
 
-void HttpServerImpl::AddOnStateChangedCallback(
-    const OnStateChangedCallback& callback) {
-  callback.Run(*this);
+void HttpServerImpl::AddHttpRequestHandler(
+    const std::string& path,
+    const RequestHandlerCallback& callback) {
+  handlers_.emplace(path, callback);
+  evhttp_set_cb(httpd_.get(), path.c_str(), &ProcessRequestCallback, this);
 }
 
-void HttpServerImpl::AddRequestHandler(const std::string& path_prefix,
-                                       const OnRequestCallback& callback) {
-  handlers_.emplace(path_prefix, callback);
+void HttpServerImpl::AddHttpsRequestHandler(
+    const std::string& path,
+    const RequestHandlerCallback& callback) {
+  handlers_.emplace(path, callback);
+  evhttp_set_cb(httpsd_.get(), path.c_str(), &ProcessRequestCallback, this);
 }
 
 uint16_t HttpServerImpl::GetHttpPort() const {
@@ -217,8 +185,7 @@ uint16_t HttpServerImpl::GetHttpsPort() const {
   return 7781;
 }
 
-const std::vector<uint8_t>& HttpServerImpl::GetHttpsCertificateFingerprint()
-    const {
+std::vector<uint8_t> HttpServerImpl::GetHttpsCertificateFingerprint() const {
   return cert_fingerprint_;
 }
 

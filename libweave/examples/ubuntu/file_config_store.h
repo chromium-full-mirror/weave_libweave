@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -21,9 +21,6 @@ class FileConfigStore : public provider::ConfigStore {
   bool LoadDefaults(Settings* settings) override;
   std::string LoadSettings() override;
   void SaveSettings(const std::string& settings) override;
-  std::vector<std::string> LoadCommandDefs() override;
-  std::vector<std::string> LoadStateDefs() override;
-  std::vector<std::string> LoadStateDefaults() override;
 
  private:
   bool disable_security_{false};

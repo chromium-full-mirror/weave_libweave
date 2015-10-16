@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -17,34 +17,31 @@ namespace provider {
 
 class HttpClient {
  public:
+  enum class Method {
+    kGet,
+    kPatch,
+    kPost,
+    kPut,
+  };
+
   class Response {
    public:
     virtual int GetStatusCode() const = 0;
     virtual std::string GetContentType() const = 0;
-    virtual const std::string& GetData() const = 0;
+    virtual std::string GetData() const = 0;
 
-    // TODO(vitalybuka): Hide when SendRequestAndBlock is removed.
     virtual ~Response() = default;
   };
 
   using Headers = std::vector<std::pair<std::string, std::string>>;
-  using SuccessCallback = base::Callback<void(int, const Response&)>;
-  using ErrorCallback = base::Callback<void(int, const Error*)>;
+  using SendRequestCallback =
+      base::Callback<void(std::unique_ptr<Response> response, ErrorPtr error)>;
 
-  // TODO(vitalybuka): Remove blocking version.
-  virtual std::unique_ptr<Response> SendRequestAndBlock(
-      const std::string& method,
-      const std::string& url,
-      const Headers& headers,
-      const std::string& data,
-      ErrorPtr* error) = 0;
-
-  virtual int SendRequest(const std::string& method,
-                          const std::string& url,
-                          const Headers& headers,
-                          const std::string& data,
-                          const SuccessCallback& success_callback,
-                          const ErrorCallback& error_callback) = 0;
+  virtual void SendRequest(Method method,
+                           const std::string& url,
+                           const Headers& headers,
+                           const std::string& data,
+                           const SendRequestCallback& callback) = 0;
 
  protected:
   virtual ~HttpClient() = default;

@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -35,14 +35,12 @@ class NetworkImpl : public provider::Network, public provider::Wifi {
   State GetConnectionState() const override;
   void OpenSslSocket(const std::string& host,
                      uint16_t port,
-                     const OpenSslSocketSuccessCallback& success_callback,
-                     const ErrorCallback& error_callback) override;
+                     const OpenSslSocketCallback& callback) override;
 
   // Wifi implementation.
   void Connect(const std::string& ssid,
                const std::string& passphrase,
-               const SuccessCallback& success_callback,
-               const ErrorCallback& error_callback) override;
+               const DoneCallback& callback) override;
   void StartAccessPoint(const std::string& ssid) override;
   void StopAccessPoint() override;
 
@@ -53,8 +51,7 @@ class NetworkImpl : public provider::Network, public provider::Wifi {
                     const std::string& passphrase,
                     int pid,
                     base::Time until,
-                    const SuccessCallback& success_callback,
-                    const ErrorCallback& error_callback);
+                    const DoneCallback& callback);
   void UpdateNetworkState();
 
   bool force_bootstrapping_{false};

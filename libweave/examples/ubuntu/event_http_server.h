@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -28,13 +28,13 @@ class HttpServerImpl : public provider::HttpServer {
 
   explicit HttpServerImpl(EventTaskRunner* task_runner);
 
-  void AddOnStateChangedCallback(
-      const OnStateChangedCallback& callback) override;
-  void AddRequestHandler(const std::string& path_prefix,
-                         const OnRequestCallback& callback) override;
+  void AddHttpRequestHandler(const std::string& path_prefix,
+                             const RequestHandlerCallback& callback) override;
+  void AddHttpsRequestHandler(const std::string& path_prefix,
+                              const RequestHandlerCallback& callback) override;
   uint16_t GetHttpPort() const override;
   uint16_t GetHttpsPort() const override;
-  const std::vector<uint8_t>& GetHttpsCertificateFingerprint() const override;
+  std::vector<uint8_t> GetHttpsCertificateFingerprint() const override;
 
  private:
   void GenerateX509();
@@ -46,7 +46,7 @@ class HttpServerImpl : public provider::HttpServer {
                     const std::string& mime_type);
   void NotFound(evhttp_request* req);
 
-  std::map<std::string, OnRequestCallback> handlers_;
+  std::map<std::string, RequestHandlerCallback> handlers_;
 
   std::unique_ptr<EC_KEY, decltype(&EC_KEY_free)> ec_key_{nullptr,
                                                           &EC_KEY_free};

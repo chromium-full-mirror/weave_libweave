@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -20,17 +20,17 @@ class Network {
  public:
   enum class State {
     kOffline = 0,
-    kFailure,
+    kError,
     kConnecting,
-    kConnected,
+    kOnline,
   };
 
   // Callback type for AddConnectionChangedCallback.
   using ConnectionChangedCallback = base::Closure;
 
   // Callback type for OpenSslSocket.
-  using OpenSslSocketSuccessCallback =
-      base::Callback<void(std::unique_ptr<Stream> stream)>;
+  using OpenSslSocketCallback =
+      base::Callback<void(std::unique_ptr<Stream> stream, ErrorPtr error)>;
 
   // Subscribes to notification about changes in network connectivity. Changes
   // may include but not limited: interface up or down, new IP was assigned,
@@ -42,11 +42,9 @@ class Network {
   virtual State GetConnectionState() const = 0;
 
   // Opens bidirectional sockets and returns attached stream.
-  virtual void OpenSslSocket(
-      const std::string& host,
-      uint16_t port,
-      const OpenSslSocketSuccessCallback& success_callback,
-      const ErrorCallback& error_callback) = 0;
+  virtual void OpenSslSocket(const std::string& host,
+                             uint16_t port,
+                             const OpenSslSocketCallback& callback) = 0;
 
  protected:
   virtual ~Network() = default;

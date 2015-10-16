@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -14,6 +14,7 @@
 #include <weave/provider/test/mock_http_server.h>
 #include <weave/provider/test/mock_network.h>
 #include <weave/provider/test/mock_wifi.h>
+#include <weave/test/mock_command.h>
 #include <weave/test/mock_device.h>
 #include <weave/test/unittest_utils.h>
 
@@ -35,10 +36,11 @@ using testing::WithArgs;
 
 namespace weave {
 
+using provider::HttpClient;
+using provider::Network;
+using provider::test::MockHttpClientResponse;
 using test::CreateDictionaryValue;
 using test::ValueToString;
-using provider::test::MockHttpClientResponse;
-using provider::Network;
 
 const char kCommandDefs[] = R"({
   "base": {
@@ -135,13 +137,14 @@ class WeaveTest : public ::testing::Test {
  protected:
   void SetUp() override {}
 
-  void ExpectRequest(const std::string& method,
+  void ExpectRequest(HttpClient::Method method,
                      const std::string& url,
                      const std::string& json_response) {
-    EXPECT_CALL(http_client_, MockSendRequest(method, url, _, _, _))
-        .WillOnce(InvokeWithoutArgs([json_response]() {
-          provider::test::MockHttpClientResponse* response =
-              new StrictMock<provider::test::MockHttpClientResponse>;
+    EXPECT_CALL(http_client_, SendRequest(method, url, _, _, _))
+        .WillOnce(WithArgs<4>(Invoke([json_response](
+            const HttpClient::SendRequestCallback& callback) {
+          std::unique_ptr<provider::test::MockHttpClientResponse> response{
+              new StrictMock<provider::test::MockHttpClientResponse>};
           EXPECT_CALL(*response, GetStatusCode())
               .Times(AtLeast(1))
               .WillRepeatedly(Return(200));
@@ -150,22 +153,13 @@ class WeaveTest : public ::testing::Test {
               .WillRepeatedly(Return("application/json; charset=utf-8"));
           EXPECT_CALL(*response, GetData())
               .Times(AtLeast(1))
-              .WillRepeatedly(ReturnRefOfCopy(json_response));
-          return response;
-        }));
+              .WillRepeatedly(Return(json_response));
+          callback.Run(std::move(response), nullptr);
+        })));
   }
 
   void InitConfigStore() {
     EXPECT_CALL(config_store_, SaveSettings("")).WillRepeatedly(Return());
-
-    EXPECT_CALL(config_store_, LoadCommandDefs())
-        .WillOnce(Return(std::vector<std::string>{kCommandDefs}));
-
-    EXPECT_CALL(config_store_, LoadStateDefs())
-        .WillOnce(Return(std::vector<std::string>{kStateDefs}));
-
-    EXPECT_CALL(config_store_, LoadStateDefaults())
-        .WillOnce(Return(std::vector<std::string>{kStateDefaults}));
   }
 
   void InitNetwork() {
@@ -201,6 +195,7 @@ class WeaveTest : public ::testing::Test {
     }
 
     EXPECT_CALL(dns_sd_, PublishService("_privet._tcp", 11, MatchTxt(txt)))
+        .Times(AtMost(1))
         .WillOnce(Return());
   }
 
@@ -208,17 +203,18 @@ class WeaveTest : public ::testing::Test {
     EXPECT_CALL(http_server_, GetHttpPort()).WillRepeatedly(Return(11));
     EXPECT_CALL(http_server_, GetHttpsPort()).WillRepeatedly(Return(12));
     EXPECT_CALL(http_server_, GetHttpsCertificateFingerprint())
-        .WillRepeatedly(ReturnRefOfCopy(std::vector<uint8_t>{1, 2, 3}));
-    EXPECT_CALL(http_server_, AddRequestHandler(_, _))
-        .WillRepeatedly(
-            Invoke([this](const std::string& path_prefix,
-                          const provider::HttpServer::OnRequestCallback& cb) {
+        .WillRepeatedly(Return(std::vector<uint8_t>{1, 2, 3}));
+    EXPECT_CALL(http_server_, AddHttpRequestHandler(_, _))
+        .WillRepeatedly(Invoke(
+            [this](const std::string& path_prefix,
+                   const provider::HttpServer::RequestHandlerCallback& cb) {
               http_server_request_cb_.push_back(cb);
             }));
-    EXPECT_CALL(http_server_, AddOnStateChangedCallback(_))
+    EXPECT_CALL(http_server_, AddHttpsRequestHandler(_, _))
         .WillRepeatedly(Invoke(
-            [this](const provider::HttpServer::OnStateChangedCallback& cb) {
-              http_server_changed_cb_.push_back(cb);
+            [this](const std::string& path_prefix,
+                   const provider::HttpServer::RequestHandlerCallback& cb) {
+              http_server_request_cb_.push_back(cb);
             }));
   }
 
@@ -236,8 +232,9 @@ class WeaveTest : public ::testing::Test {
                                     &http_client_, &network_, &dns_sd_,
                                     &http_server_, &wifi_, &bluetooth_);
 
-    for (const auto& cb : http_server_changed_cb_)
-      cb.Run(http_server_);
+    device_->AddCommandDefinitionsFromJson(kCommandDefs);
+    device_->AddStateDefinitionsFromJson(kStateDefs);
+    device_->SetStatePropertiesFromJson(kStateDefaults, nullptr);
 
     task_runner_.Run();
   }
@@ -250,9 +247,8 @@ class WeaveTest : public ::testing::Test {
     }
   }
 
-  std::vector<provider::HttpServer::OnStateChangedCallback>
-      http_server_changed_cb_;
-  std::vector<provider::HttpServer::OnRequestCallback> http_server_request_cb_;
+  std::vector<provider::HttpServer::RequestHandlerCallback>
+      http_server_request_cb_;
 
   StrictMock<provider::test::MockConfigStore> config_store_;
   StrictMock<provider::test::FakeTaskRunner> task_runner_;
@@ -268,10 +264,11 @@ class WeaveTest : public ::testing::Test {
   std::unique_ptr<weave::Device> device_;
 };
 
-TEST_F(WeaveTest, MockDevice) {
+TEST_F(WeaveTest, Mocks) {
   // Test checks if mock implements entire interface and mock can be
   // instantiated.
   test::MockDevice device;
+  test::MockCommand command;
 }
 
 TEST_F(WeaveTest, StartMinimal) {
@@ -290,9 +287,7 @@ TEST_F(WeaveTest, StartNoWifi) {
   device_ = weave::Device::Create(&config_store_, &task_runner_, &http_client_,
                                   &network_, &dns_sd_, &http_server_, nullptr,
                                   &bluetooth_);
-
-  for (const auto& cb : http_server_changed_cb_)
-    cb.Run(http_server_);
+  device_->AddCommandDefinitionsFromJson(kCommandDefs);
 
   task_runner_.Run();
 }
@@ -312,14 +307,14 @@ TEST_F(WeaveBasicTest, Start) {
 }
 
 TEST_F(WeaveBasicTest, Register) {
-  EXPECT_CALL(network_, OpenSslSocket(_, _, _, _)).WillRepeatedly(Return());
+  EXPECT_CALL(network_, OpenSslSocket(_, _, _)).WillRepeatedly(Return());
   StartDevice();
 
   auto draft = CreateDictionaryValue(kDeviceResource);
   auto response = CreateDictionaryValue(kRegistrationResponse);
   response->Set("deviceDraft", draft->DeepCopy());
   ExpectRequest(
-      "PATCH",
+      HttpClient::Method::kPatch,
       "https://www.googleapis.com/clouddevices/v1/registrationTickets/"
       "TICKET_ID?key=TEST_API_KEY",
       ValueToString(*response));
@@ -327,17 +322,26 @@ TEST_F(WeaveBasicTest, Register) {
   response = CreateDictionaryValue(kRegistrationFinalResponse);
   response->Set("deviceDraft", draft->DeepCopy());
   ExpectRequest(
-      "POST",
+      HttpClient::Method::kPost,
       "https://www.googleapis.com/clouddevices/v1/registrationTickets/"
       "TICKET_ID/finalize?key=TEST_API_KEY",
       ValueToString(*response));
 
-  ExpectRequest("POST", "https://accounts.google.com/o/oauth2/token",
+  ExpectRequest(HttpClient::Method::kPost,
+                "https://accounts.google.com/o/oauth2/token",
                 kAuthTokenResponse);
 
   InitDnsSdPublishing(true, "DB");
 
-  EXPECT_EQ("CLOUD_ID", device_->Register("TICKET_ID", nullptr));
+  bool done = false;
+  device_->Register("TICKET_ID", base::Bind([this, &done](ErrorPtr error) {
+                      EXPECT_FALSE(error);
+                      done = true;
+                      task_runner_.Break();
+                      EXPECT_EQ("CLOUD_ID", device_->GetSettings().cloud_id);
+                    }));
+  task_runner_.Run();
+  EXPECT_TRUE(done);
 }
 
 class WeaveWiFiSetupTest : public WeaveTest {
@@ -351,7 +355,7 @@ class WeaveWiFiSetupTest : public WeaveTest {
     InitDnsSd();
 
     EXPECT_CALL(network_, GetConnectionState())
-        .WillRepeatedly(Return(provider::Network::State::kConnected));
+        .WillRepeatedly(Return(provider::Network::State::kOnline));
   }
 };
 
@@ -360,7 +364,7 @@ TEST_F(WeaveWiFiSetupTest, StartOnlineNoPrevSsid) {
 
   // Short disconnect.
   NotifyNetworkChanged(provider::Network::State::kOffline, {});
-  NotifyNetworkChanged(provider::Network::State::kConnected,
+  NotifyNetworkChanged(provider::Network::State::kOnline,
                        base::TimeDelta::FromSeconds(10));
   task_runner_.Run();
 
@@ -408,7 +412,7 @@ TEST_F(WeaveWiFiSetupTest, StartOnlineWithPrevSsid) {
     task_runner_.Run();
   }
 
-  NotifyNetworkChanged(Network::State::kConnected, {});
+  NotifyNetworkChanged(Network::State::kOnline, {});
   task_runner_.Run();
 }
 

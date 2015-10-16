@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -38,7 +38,8 @@ class DeviceDelegate {
   virtual void SetHttpsPort(uint16_t port) = 0;
 
   // Create default instance.
-  static std::unique_ptr<DeviceDelegate> CreateDefault();
+  static std::unique_ptr<DeviceDelegate> CreateDefault(uint16_t http_port,
+                                                       uint16_t https_port);
 };
 
 }  // namespace privet

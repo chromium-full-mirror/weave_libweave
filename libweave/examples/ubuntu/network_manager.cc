@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -57,13 +57,11 @@ void NetworkImpl::AddConnectionChangedCallback(
   callbacks_.push_back(callback);
 }
 
-void NetworkImpl::TryToConnect(
-    const std::string& ssid,
-    const std::string& passphrase,
-    int pid,
-    base::Time until,
-    const SuccessCallback& success_callback,
-    const ErrorCallback& error_callback) {
+void NetworkImpl::TryToConnect(const std::string& ssid,
+                               const std::string& passphrase,
+                               int pid,
+                               base::Time until,
+                               const DoneCallback& callback) {
   if (pid) {
     int status = 0;
     if (pid == waitpid(pid, &status, WNOWAIT)) {
@@ -80,7 +78,8 @@ void NetworkImpl::TryToConnect(
       close(sockf_d);
 
       if (ssid == essid)
-        return task_runner_->PostDelayedTask(FROM_HERE, success_callback, {});
+        return task_runner_->PostDelayedTask(FROM_HERE,
+                                             base::Bind(callback, nullptr), {});
       pid = 0;  // Try again.
     }
   }
@@ -95,36 +94,32 @@ void NetworkImpl::TryToConnect(
     Error::AddTo(&error, FROM_HERE, "wifi", "timeout",
                  "Timeout connecting to WiFI network.");
     task_runner_->PostDelayedTask(
-        FROM_HERE, base::Bind(error_callback, base::Owned(error.release())),
-        {});
+        FROM_HERE, base::Bind(callback, base::Passed(&error)), {});
     return;
   }
 
   task_runner_->PostDelayedTask(
-      FROM_HERE, base::Bind(&NetworkImpl::TryToConnect,
-                            weak_ptr_factory_.GetWeakPtr(), ssid, passphrase,
-                            pid, until, success_callback, error_callback),
+      FROM_HERE,
+      base::Bind(&NetworkImpl::TryToConnect, weak_ptr_factory_.GetWeakPtr(),
+                 ssid, passphrase, pid, until, callback),
       base::TimeDelta::FromSeconds(1));
 }
 
 void NetworkImpl::Connect(const std::string& ssid,
                           const std::string& passphrase,
-                          const SuccessCallback& success_callback,
-                          const ErrorCallback& error_callback) {
+                          const DoneCallback& callback) {
   force_bootstrapping_ = false;
   CHECK(!hostapd_started_);
   if (hostapd_started_) {
     ErrorPtr error;
     Error::AddTo(&error, FROM_HERE, "wifi", "busy", "Running Access Point.");
     task_runner_->PostDelayedTask(
-        FROM_HERE, base::Bind(error_callback, base::Owned(error.release())),
-        {});
+        FROM_HERE, base::Bind(callback, base::Passed(&error)), {});
     return;
   }
 
   TryToConnect(ssid, passphrase, 0,
-               base::Time::Now() + base::TimeDelta::FromMinutes(1),
-               success_callback, error_callback);
+               base::Time::Now() + base::TimeDelta::FromMinutes(1), callback);
 }
 
 void NetworkImpl::UpdateNetworkState() {
@@ -132,9 +127,9 @@ void NetworkImpl::UpdateNetworkState() {
   if (force_bootstrapping_)
     return;
   if (std::system("ping talk.google.com -c 1") == 0)
-    network_state_ = State::kConnected;
+    network_state_ = State::kOnline;
   else if (std::system("nmcli dev"))
-    network_state_ = State::kFailure;
+    network_state_ = State::kError;
   else if (std::system("nmcli dev | grep connecting") == 0)
     network_state_ = State::kConnecting;
 
@@ -203,21 +198,22 @@ bool NetworkImpl::HasWifiCapability() {
   return std::system("nmcli dev | grep ^wlan0") == 0;
 }
 
-void NetworkImpl::OpenSslSocket(
-    const std::string& host,
-    uint16_t port,
-    const OpenSslSocketSuccessCallback& success_callback,
-    const ErrorCallback& error_callback) {
+void NetworkImpl::OpenSslSocket(const std::string& host,
+                                uint16_t port,
+                                const OpenSslSocketCallback& callback) {
   // Connect to SSL port instead of upgrading to TLS.
   std::unique_ptr<SSLStream> tls_stream{new SSLStream{task_runner_}};
 
   if (tls_stream->Init(host, port)) {
     task_runner_->PostDelayedTask(
-        FROM_HERE, base::Bind(success_callback, base::Passed(&tls_stream)), {});
+        FROM_HERE, base::Bind(callback, base::Passed(&tls_stream), nullptr),
+        {});
   } else {
     ErrorPtr error;
     Error::AddTo(&error, FROM_HERE, "tls", "tls_init_failed",
                  "Failed to initialize TLS stream.");
+    task_runner_->PostDelayedTask(
+        FROM_HERE, base::Bind(callback, nullptr, base::Passed(&error)), {});
   }
 }
 

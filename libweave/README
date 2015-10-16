@@ -27,22 +27,12 @@ Implementation sources:
 Example of device code:
   examples/
 
-Optional dependencies:
-  external/
+Dependencies:
   third_party/
 
 Build files:
   libweave_standalone.gyp
   libweave_common.gypi
-
-ChromiumOS specific build files:
-  libweave-test.pc.in
-  libweave.pc.in
-  platform2.gyp
-  platform2_preinstall.sh
-
-AOSP specific build files:
-  Android.mk
 
 Quick start on Ubuntu
 ---------------------
@@ -91,7 +81,7 @@ Everywhere below Debug can be replaced with Release.
 
 Generate ninja build files:
 
-  gyp -I libweave_common.gypi --toplevel-dir=. \
+  gyp -I libweave_common.gypi --toplevel-dir=. --depth=. \
       -f ninja libweave_standalone.gyp
 
 Build library with tests:

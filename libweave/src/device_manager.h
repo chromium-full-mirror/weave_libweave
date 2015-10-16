@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -37,14 +37,20 @@ class DeviceManager final : public Device {
   const Settings& GetSettings() const override;
   void AddSettingsChangedCallback(
       const SettingsChangedCallback& callback) override;
+  void AddCommandDefinitionsFromJson(const std::string& json) override;
+  void AddCommandDefinitions(const base::DictionaryValue& dict) override;
   bool AddCommand(const base::DictionaryValue& command,
                   std::string* id,
                   ErrorPtr* error) override;
   Command* FindCommand(const std::string& id) override;
-  void AddCommandAddedCallback(const CommandCallback& callback) override;
-  void AddCommandRemovedCallback(const CommandCallback& callback) override;
+  void AddCommandHandler(const std::string& command_name,
+                         const CommandHandlerCallback& callback) override;
   void AddStateChangedCallback(const base::Closure& callback) override;
-  bool SetStateProperties(const base::DictionaryValue& property_set,
+  void AddStateDefinitionsFromJson(const std::string& json) override;
+  void AddStateDefinitions(const base::DictionaryValue& dict) override;
+  bool SetStatePropertiesFromJson(const std::string& json,
+                                  ErrorPtr* error) override;
+  bool SetStateProperties(const base::DictionaryValue& dict,
                           ErrorPtr* error) override;
   std::unique_ptr<base::Value> GetStateProperty(
       const std::string& name) const override;
@@ -52,7 +58,8 @@ class DeviceManager final : public Device {
                         const base::Value& value,
                         ErrorPtr* error) override;
   std::unique_ptr<base::DictionaryValue> GetState() const override;
-  std::string Register(const std::string& ticket_id, ErrorPtr* error) override;
+  void Register(const std::string& ticket_id,
+                const DoneCallback& callback) override;
   GcdState GetGcdState() const override;
   void AddGcdStateChangedCallback(
       const GcdStateChangedCallback& callback) override;

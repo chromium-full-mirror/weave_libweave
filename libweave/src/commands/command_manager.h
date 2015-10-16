@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -20,10 +20,6 @@ namespace weave {
 
 class CommandInstance;
 
-namespace provider {
-class ConfigStore;
-}
-
 // CommandManager class that will have a list of all the device command
 // schemas as well as the live command queue of pending command instances
 // dispatched to the device.
@@ -37,8 +33,10 @@ class CommandManager final {
                   std::string* id,
                   ErrorPtr* error);
   CommandInstance* FindCommand(const std::string& id);
-  void AddCommandAddedCallback(const Device::CommandCallback& callback);
-  void AddCommandRemovedCallback(const Device::CommandCallback& callback);
+  void AddCommandAddedCallback(const CommandQueue::CommandCallback& callback);
+  void AddCommandRemovedCallback(const CommandQueue::CommandCallback& callback);
+  void AddCommandHandler(const std::string& command_name,
+                         const Device::CommandHandlerCallback& callback);
 
   // Sets callback which is called when command definitions is changed.
   void AddCommandDefChanged(const base::Closure& callback);
@@ -69,10 +67,8 @@ class CommandManager final {
                     ErrorPtr* error);
 
   // Startup method to be called by buffet daemon at startup.
-  // Initializes the object and loads:
-  //   1) the standard GCD command dictionary
-  //   2) static vendor-provided command definitions
-  void Startup(weave::provider::ConfigStore* config_store);
+  // Initializes standard GCD command dictionary.
+  void Startup();
 
   // Adds a new command to the command queue.
   void AddCommand(std::unique_ptr<CommandInstance> command_instance);

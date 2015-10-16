@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -12,6 +12,7 @@
 #include "src/commands/prop_constraints.h"
 #include "src/commands/prop_types.h"
 #include "src/commands/schema_constants.h"
+#include "src/utils.h"
 
 namespace weave {
 
@@ -32,6 +33,15 @@ CloudCommandProxy::CloudCommandProxy(
   observer_.Add(command_instance);
 }
 
+void CloudCommandProxy::OnErrorChanged() {
+  std::unique_ptr<base::DictionaryValue> patch{new base::DictionaryValue};
+  patch->Set(commands::attributes::kCommand_Error,
+             command_instance_->GetError()
+                 ? ErrorInfoToJson(*command_instance_->GetError()).release()
+                 : base::Value::CreateNullValue().release());
+  QueueCommandUpdate(std::move(patch));
+}
+
 void CloudCommandProxy::OnResultsChanged() {
   std::unique_ptr<base::DictionaryValue> patch{new base::DictionaryValue};
   patch->Set(commands::attributes::kCommand_Results,
@@ -39,10 +49,10 @@ void CloudCommandProxy::OnResultsChanged() {
   QueueCommandUpdate(std::move(patch));
 }
 
-void CloudCommandProxy::OnStatusChanged() {
+void CloudCommandProxy::OnStateChanged() {
   std::unique_ptr<base::DictionaryValue> patch{new base::DictionaryValue};
   patch->SetString(commands::attributes::kCommand_State,
-                   EnumToString(command_instance_->GetStatus()));
+                   EnumToString(command_instance_->GetState()));
   QueueCommandUpdate(std::move(patch));
 }
 
@@ -78,7 +88,12 @@ void CloudCommandProxy::QueueCommandUpdate(
     }
   }
   // Send out an update request to the server, if needed.
-  SendCommandUpdate();
+
+  // Post to accumulate more changes during the current message loop task run.
+  task_runner_->PostDelayedTask(
+      FROM_HERE, base::Bind(&CloudCommandProxy::SendCommandUpdate,
+                            backoff_weak_ptr_factory_.GetWeakPtr()),
+      {});
 }
 
 void CloudCommandProxy::SendCommandUpdate() {
@@ -124,10 +139,8 @@ void CloudCommandProxy::SendCommandUpdate() {
   command_update_in_progress_ = true;
   cloud_command_updater_->UpdateCommand(
       command_instance_->GetID(), *update_queue_.front().second,
-      base::Bind(&CloudCommandProxy::OnUpdateCommandFinished,
-                 weak_ptr_factory_.GetWeakPtr(), true),
-      base::Bind(&CloudCommandProxy::OnUpdateCommandFinished,
-                 weak_ptr_factory_.GetWeakPtr(), false));
+      base::Bind(&CloudCommandProxy::OnUpdateCommandDone,
+                 weak_ptr_factory_.GetWeakPtr()));
 }
 
 void CloudCommandProxy::ResendCommandUpdate() {
@@ -135,10 +148,10 @@ void CloudCommandProxy::ResendCommandUpdate() {
   SendCommandUpdate();
 }
 
-void CloudCommandProxy::OnUpdateCommandFinished(bool success) {
+void CloudCommandProxy::OnUpdateCommandDone(ErrorPtr error) {
   command_update_in_progress_ = false;
-  cloud_backoff_entry_->InformOfRequest(success);
-  if (success) {
+  cloud_backoff_entry_->InformOfRequest(!error);
+  if (!error) {
     // Remove the succeeded update from the queue.
     update_queue_.pop_front();
   }

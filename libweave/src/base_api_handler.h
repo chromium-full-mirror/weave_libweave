@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -13,9 +13,8 @@
 namespace weave {
 
 class Command;
-class CommandManager;
+class Device;
 class DeviceRegistrationInfo;
-class StateManager;
 struct Settings;
 
 // Handles commands from 'base' package.
@@ -26,21 +25,18 @@ struct Settings;
 //  base.updateBaseConfiguration
 class BaseApiHandler final {
  public:
-  BaseApiHandler(DeviceRegistrationInfo* device_info,
-                 const std::shared_ptr<StateManager>& state_manager,
-                 const std::shared_ptr<CommandManager>& command_manager);
+  BaseApiHandler(DeviceRegistrationInfo* device_info, Device* device);
 
  private:
-  void OnCommandAdded(Command* command);
-  void UpdateBaseConfiguration(Command* command);
-  void UpdateDeviceInfo(Command* command);
+  void UpdateBaseConfiguration(const std::weak_ptr<Command>& command);
+  void UpdateDeviceInfo(const std::weak_ptr<Command>& command);
   bool UpdateState(const std::string& anonymous_access_role,
                    bool discovery_enabled,
                    bool pairing_enabled);
   void OnConfigChanged(const Settings& settings);
 
   DeviceRegistrationInfo* device_info_;
-  std::shared_ptr<StateManager> state_manager_;
+  Device* device_;
 
   base::WeakPtrFactory<BaseApiHandler> weak_ptr_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(BaseApiHandler);

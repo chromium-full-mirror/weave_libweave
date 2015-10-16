@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -58,49 +58,6 @@ void FileConfigStore::SaveSettings(const std::string& settings) {
   LOG(INFO) << "Saving settings to " << kSettingsPath;
   std::ofstream str(kSettingsPath);
   str << settings;
-}
-
-std::vector<std::string> FileConfigStore::LoadCommandDefs() {
-  return {R"({
-    "base": {
-      "updateBaseConfiguration": {},
-      "identify": {},
-      "updateDeviceInfo": {}
-    },
-    "_greeter": {
-      "_greet": {
-        "minimalRole": "user",
-        "parameters": { "_name": "string"},
-        "results": { "_greeting": "string" }
-      }
-    },
-    "_ledflasher": {
-       "_set":{
-         "parameters": {
-           "_led": {"minimum": 1, "maximum": 3},
-           "_on": "boolean"
-         }
-       },
-       "_toggle":{
-         "parameters": {
-           "_led": {"minimum": 1, "maximum": 3}
-         }
-      }
-    }
-  })"};
-}
-std::vector<std::string> FileConfigStore::LoadStateDefs() {
-  return {R"({
-    "_greeter": {"_greetings_counter":"integer"},
-    "_ledflasher": {"_leds": {"items": "boolean"}}
-  })"};
-}
-
-std::vector<std::string> FileConfigStore::LoadStateDefaults() {
-  return {R"({
-    "_greeter": {"_greetings_counter": 0},
-    "_ledflasher":{"_leds": [false, false, false]}
-  })"};
 }
 
 }  // namespace examples

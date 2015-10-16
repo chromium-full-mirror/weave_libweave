@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 #include <weave/provider/test/mock_config_store.h>
 #include <weave/provider/test/mock_http_client.h>
+#include <weave/test/mock_device.h>
 
 #include "src/commands/command_manager.h"
 #include "src/commands/unittest_utils.h"
@@ -18,6 +19,8 @@
 #include "src/states/state_manager.h"
 
 using testing::_;
+using testing::AnyOf;
+using testing::Eq;
 using testing::Invoke;
 using testing::Return;
 using testing::StrictMock;
@@ -31,58 +34,45 @@ class BaseApiHandlerTest : public ::testing::Test {
         .WillRepeatedly(Return(true));
 
     command_manager_ = std::make_shared<CommandManager>();
+    command_manager_->Startup();
+
     state_manager_ = std::make_shared<StateManager>(&mock_state_change_queue_);
-    auto state_definition = test::CreateDictionaryValue(R"({
-      'base': {
-        'firmwareVersion': 'string',
-        'localDiscoveryEnabled': 'boolean',
-        'localAnonymousAccessMaxRole': [ 'none', 'viewer', 'user' ],
-        'localPairingEnabled': 'boolean',
-        'network': {
-          'properties': {
-            'name': 'string'
-          }
-        }
-      }
-    })");
-    auto state_defaults = test::CreateDictionaryValue(R"({
-      'base': {
-        'firmwareVersion': '123123',
-        'localDiscoveryEnabled': false,
-        'localAnonymousAccessMaxRole': 'none',
-        'localPairingEnabled': false
-      }
-    })");
-    ASSERT_TRUE(
-        state_manager_->LoadStateDefinition(*state_definition, nullptr));
-    ASSERT_TRUE(state_manager_->LoadStateDefaults(*state_defaults, nullptr));
+    state_manager_->Startup();
+
+    EXPECT_CALL(device_, SetStateProperties(_, _))
+        .WillRepeatedly(
+            Invoke(state_manager_.get(), &StateManager::SetProperties));
+    EXPECT_CALL(device_, AddCommandDefinitionsFromJson(_))
+        .WillRepeatedly(Invoke([this](const std::string& json) {
+          EXPECT_TRUE(command_manager_->LoadCommands(json, nullptr));
+        }));
+
+    EXPECT_CALL(device_, AddCommandHandler(AnyOf("base.updateBaseConfiguration",
+                                                 "base.updateDeviceInfo"),
+                                           _))
+        .WillRepeatedly(
+            Invoke(command_manager_.get(), &CommandManager::AddCommandHandler));
+
     std::unique_ptr<Config> config{new Config{&config_store_}};
     config->Load();
     dev_reg_.reset(new DeviceRegistrationInfo(command_manager_, state_manager_,
                                               std::move(config), nullptr,
                                               &http_client_, nullptr));
-    handler_.reset(
-        new BaseApiHandler{dev_reg_.get(), state_manager_, command_manager_});
-  }
-
-  void LoadCommands(const std::string& command_definitions) {
-    auto json = test::CreateDictionaryValue(command_definitions.c_str());
-    EXPECT_TRUE(command_manager_->LoadBaseCommands(*json, nullptr));
-    EXPECT_TRUE(command_manager_->LoadCommands(*json, nullptr));
+    handler_.reset(new BaseApiHandler{dev_reg_.get(), &device_});
   }
 
   void AddCommand(const std::string& command) {
     auto command_instance = CommandInstance::FromJson(
         test::CreateDictionaryValue(command.c_str()).get(),
-        CommandOrigin::kLocal, command_manager_->GetCommandDictionary(),
+        Command::Origin::kLocal, command_manager_->GetCommandDictionary(),
         nullptr, nullptr);
     EXPECT_TRUE(!!command_instance);
 
     std::string id{base::IntToString(++command_id_)};
     command_instance->SetID(id);
     command_manager_->AddCommand(std::move(command_instance));
-    EXPECT_EQ(CommandStatus::kDone,
-              command_manager_->FindCommand(id)->GetStatus());
+    EXPECT_EQ(Command::State::kDone,
+              command_manager_->FindCommand(id)->GetState());
   }
 
   provider::test::MockConfigStore config_store_;
@@ -92,23 +82,11 @@ class BaseApiHandlerTest : public ::testing::Test {
   testing::StrictMock<MockStateChangeQueueInterface> mock_state_change_queue_;
   std::shared_ptr<StateManager> state_manager_;
   std::unique_ptr<BaseApiHandler> handler_;
+  StrictMock<test::MockDevice> device_;
   int command_id_{0};
 };
 
 TEST_F(BaseApiHandlerTest, UpdateBaseConfiguration) {
-  LoadCommands(R"({
-    'base': {
-      'updateBaseConfiguration': {
-        'parameters': {
-          'localDiscoveryEnabled': 'boolean',
-          'localAnonymousAccessMaxRole': [ 'none', 'viewer', 'user' ],
-          'localPairingEnabled': 'boolean'
-         },
-         'results': {}
-      }
-    }
-  })");
-
   const Settings& settings = dev_reg_->GetSettings();
 
   AddCommand(R"({
@@ -173,22 +151,6 @@ TEST_F(BaseApiHandlerTest, UpdateBaseConfiguration) {
 }
 
 TEST_F(BaseApiHandlerTest, UpdateDeviceInfo) {
-  LoadCommands(R"({
-    'base': {
-      'updateDeviceInfo': {
-        'parameters': {
-          'description': 'string',
-          'name': {
-            'type': 'string',
-            'minLength': 1
-          },
-          'location': 'string'
-        },
-        'results': {}
-      }
-    }
-  })");
-
   AddCommand(R"({
     'name' : 'base.updateDeviceInfo',
     'parameters': {

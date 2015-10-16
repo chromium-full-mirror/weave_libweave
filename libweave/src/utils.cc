@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -22,6 +22,9 @@ std::string LimitString(const std::string& text, size_t max_len) {
 }
 
 const size_t kMaxStrLen = 1700;  // Log messages are limited to 2000 chars.
+
+const char kErrorCodeKey[] = "code";
+const char kErrorMessageKey[] = "message";
 
 }  // anonymous namespace
 
@@ -60,6 +63,13 @@ std::unique_ptr<base::DictionaryValue> LoadJsonDict(
   }
   result.reset(dict_value);
   return result;
+}
+
+std::unique_ptr<base::DictionaryValue> ErrorInfoToJson(const Error& error) {
+  std::unique_ptr<base::DictionaryValue> output{new base::DictionaryValue};
+  output->SetString(kErrorMessageKey, error.GetMessage());
+  output->SetString(kErrorCodeKey, error.GetCode());
+  return output;
 }
 
 }  // namespace weave

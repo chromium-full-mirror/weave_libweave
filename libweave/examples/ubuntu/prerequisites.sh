@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2015 The Chromium OS Authors. All rights reserved.
+# Copyright 2015 The Weave Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -15,6 +15,8 @@ sudo apt-get install ${APT_GET_OPTS} \
   libavahi-client-dev \
   libcurl4-openssl-dev \
   libexpat1-dev \
+  libnl-3-dev \
+  libnl-route-3-dev \
   libtool \
   ninja-build \
   || exit 1

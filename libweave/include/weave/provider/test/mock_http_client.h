@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -20,32 +20,19 @@ class MockHttpClientResponse : public HttpClient::Response {
  public:
   MOCK_CONST_METHOD0(GetStatusCode, int());
   MOCK_CONST_METHOD0(GetContentType, std::string());
-  MOCK_CONST_METHOD0(GetData, const std::string&());
+  MOCK_CONST_METHOD0(GetData, std::string());
 };
 
 class MockHttpClient : public HttpClient {
  public:
   ~MockHttpClient() override = default;
 
-  MOCK_METHOD5(MockSendRequest,
-               Response*(const std::string&,
-                         const std::string&,
-                         const Headers&,
-                         const std::string&,
-                         ErrorPtr*));
-
-  std::unique_ptr<Response> SendRequestAndBlock(const std::string& method,
-                                                const std::string& url,
-                                                const Headers& headers,
-                                                const std::string& data,
-                                                ErrorPtr* error) override;
-
-  int SendRequest(const std::string& method,
-                  const std::string& url,
-                  const Headers& headers,
-                  const std::string& data,
-                  const SuccessCallback& success_callback,
-                  const ErrorCallback& error_callback) override;
+  MOCK_METHOD5(SendRequest,
+               void(Method,
+                    const std::string&,
+                    const Headers&,
+                    const std::string&,
+                    const SendRequestCallback&));
 };
 
 }  // namespace test

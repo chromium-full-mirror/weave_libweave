@@ -1,8 +1,9 @@
-// Copyright 2015 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include <bitset>
+
 #include <base/bind.h>
 #include <base/values.h>
 #include <weave/device.h>
@@ -25,6 +26,7 @@ void ShowUsage(const std::string& name) {
   LOG(ERROR) << "\nUsage: " << name << " <option(s)>"
              << "\nOptions:\n"
              << "\t-h,--help                    Show this help message\n"
+             << "\t--v=LEVEL                    Logging level\n"
              << "\t-b,--bootstrapping           Force WiFi bootstrapping\n"
              << "\t-d,--disable_security        Disable privet security\n"
              << "\t--registration_ticket=TICKET Register device with the "
@@ -33,67 +35,170 @@ void ShowUsage(const std::string& name) {
 
 class CommandHandler {
  public:
-  explicit CommandHandler(weave::Device* device) : device_{device} {
-    device->AddCommandAddedCallback(base::Bind(&CommandHandler::OnNewCommand,
-                                               weak_ptr_factory_.GetWeakPtr()));
+  CommandHandler(weave::Device* device,
+                 weave::provider::TaskRunner* task_runner)
+      : device_{device}, task_runner_(task_runner) {
+    device->AddStateDefinitionsFromJson(R"({
+      "_greeter": {"_greetings_counter":"integer"},
+      "_ledflasher": {"_leds": {"items": "boolean"}}
+    })");
+
+    device->SetStatePropertiesFromJson(R"({
+      "_greeter": {"_greetings_counter": 0},
+      "_ledflasher":{"_leds": [false, false, false]}
+    })",
+                                       nullptr);
+
+    device->AddCommandDefinitionsFromJson(R"({
+      "_greeter": {
+        "_greet": {
+          "minimalRole": "user",
+          "parameters": {
+            "_name": "string",
+            "_count": {"minimum": 1, "maximum": 100}
+          },
+          "progress": { "_todo": "integer"},
+          "results": { "_greeting": "string" }
+        }
+      },
+      "_ledflasher": {
+         "_set":{
+           "parameters": {
+             "_led": {"minimum": 1, "maximum": 3},
+             "_on": "boolean"
+           }
+         },
+         "_toggle":{
+           "parameters": {
+             "_led": {"minimum": 1, "maximum": 3}
+           }
+        }
+      }
+    })");
+    device->AddCommandHandler(
+        "_ledflasher._toggle",
+        base::Bind(&CommandHandler::OnFlasherToggleCommand,
+                   weak_ptr_factory_.GetWeakPtr()));
+    device->AddCommandHandler("_greeter._greet",
+                              base::Bind(&CommandHandler::OnGreetCommand,
+                                         weak_ptr_factory_.GetWeakPtr()));
+    device->AddCommandHandler("_ledflasher._set",
+                              base::Bind(&CommandHandler::OnFlasherSetCommand,
+                                         weak_ptr_factory_.GetWeakPtr()));
+    device->AddCommandHandler("",
+                              base::Bind(&CommandHandler::OnUnhandledCommand,
+                                         weak_ptr_factory_.GetWeakPtr()));
   }
 
  private:
-  void OnNewCommand(weave::Command* cmd) {
-    LOG(INFO) << "received command: " << cmd->GetName();
-    if (cmd->GetName() == "_greeter._greet") {
-      std::string name;
-      if (!cmd->GetParameters()->GetString("_name", &name))
-        name = "anonymous";
+  void DoGreet(const std::weak_ptr<weave::Command>& command, int todo) {
+    auto cmd = command.lock();
+    if (!cmd)
+      return;
 
-      LOG(INFO) << cmd->GetName() << " command in progress";
-      cmd->SetProgress(base::DictionaryValue{}, nullptr);
+    std::string name;
+    if (!cmd->GetParameters()->GetString("_name", &name)) {
+      weave::ErrorPtr error;
+      weave::Error::AddTo(&error, FROM_HERE, "example",
+                          "invalid_parameter_value", "Name is missing");
+      cmd->Abort(error.get(), nullptr);
+      return;
+    }
 
-      base::DictionaryValue result;
-      result.SetString("_greeting", "Hello " + name);
-      cmd->SetResults(result, nullptr);
-      LOG(INFO) << cmd->GetName() << " command finished: " << result;
+    if (todo-- > 0) {
+      LOG(INFO) << "Hello " << name;
+
+      base::DictionaryValue progress;
+      progress.SetInteger("_todo", todo);
+      cmd->SetProgress(progress, nullptr);
 
       base::DictionaryValue state;
-      state.SetIntegerWithoutPathExpansion("_greeter._greetings_counter",
-                                           ++counter_);
+      state.SetInteger("_greeter._greetings_counter", ++counter_);
       device_->SetStateProperties(state, nullptr);
+    }
 
-      LOG(INFO) << "New state: " << *device_->GetState();
+    if (todo > 0) {
+      task_runner_->PostDelayedTask(
+          FROM_HERE, base::Bind(&CommandHandler::DoGreet,
+                                weak_ptr_factory_.GetWeakPtr(), command, todo),
+          base::TimeDelta::FromSeconds(1));
+      return;
+    }
 
-      cmd->Done();
-    } else if (cmd->GetName() == "_ledflasher._set") {
-      int32_t led_index;
-      bool cmd_value;
-      if (cmd->GetParameters()->GetInteger("_led", &led_index) &&
-          cmd->GetParameters()->GetBoolean("_on", &cmd_value)) {
-        // Display this command in terminal
-        LOG(INFO) << cmd->GetName() << " _led: " << led_index
-                  << ", _on: " << (cmd_value ? "true" : "false");
+    base::DictionaryValue result;
+    result.SetString("_greeting", "Hello " + name);
+    cmd->Complete(result, nullptr);
+    LOG(INFO) << cmd->GetName() << " command finished: " << result;
+    LOG(INFO) << "New state: " << *device_->GetState();
+  }
 
-        led_index--;
-        int new_state = cmd_value ? 1 : 0;
-        int cur_state = led_status_[led_index];
-        led_status_[led_index] = new_state;
+  void OnGreetCommand(const std::weak_ptr<weave::Command>& command) {
+    auto cmd = command.lock();
+    if (!cmd)
+      return;
+    LOG(INFO) << "received command: " << cmd->GetName();
 
-        if (cmd_value != cur_state) {
-          UpdateLedState();
-        }
-      }
-      cmd->Done();
-    } else if (cmd->GetName() == "_ledflasher._toggle") {
-      int32_t led_index;
-      if (cmd->GetParameters()->GetInteger("_led", &led_index)) {
-        LOG(INFO) << cmd->GetName() << " _led: " << led_index;
-        led_index--;
-        led_status_[led_index] = ~led_status_[led_index];
+    int todo = 1;
+    cmd->GetParameters()->GetInteger("_count", &todo);
+    DoGreet(command, todo);
+  }
 
+  void OnFlasherSetCommand(const std::weak_ptr<weave::Command>& command) {
+    auto cmd = command.lock();
+    if (!cmd)
+      return;
+    LOG(INFO) << "received command: " << cmd->GetName();
+    int32_t led_index = 0;
+    bool cmd_value = false;
+    if (cmd->GetParameters()->GetInteger("_led", &led_index) &&
+        cmd->GetParameters()->GetBoolean("_on", &cmd_value)) {
+      // Display this command in terminal
+      LOG(INFO) << cmd->GetName() << " _led: " << led_index
+                << ", _on: " << (cmd_value ? "true" : "false");
+
+      led_index--;
+      int new_state = cmd_value ? 1 : 0;
+      int cur_state = led_status_[led_index];
+      led_status_[led_index] = new_state;
+
+      if (cmd_value != cur_state) {
         UpdateLedState();
       }
-      cmd->Done();
-    } else {
-      LOG(INFO) << cmd->GetName() << " unimplemented command: ignored";
+      cmd->Complete({}, nullptr);
+      return;
     }
+    weave::ErrorPtr error;
+    weave::Error::AddTo(&error, FROM_HERE, "example", "invalid_parameter_value",
+                        "Invalid parameters");
+    cmd->Abort(error.get(), nullptr);
+  }
+
+  void OnFlasherToggleCommand(const std::weak_ptr<weave::Command>& command) {
+    auto cmd = command.lock();
+    if (!cmd)
+      return;
+    LOG(INFO) << "received command: " << cmd->GetName();
+    int32_t led_index = 0;
+    if (cmd->GetParameters()->GetInteger("_led", &led_index)) {
+      LOG(INFO) << cmd->GetName() << " _led: " << led_index;
+      led_index--;
+      led_status_[led_index] = ~led_status_[led_index];
+
+      UpdateLedState();
+      cmd->Complete({}, nullptr);
+      return;
+    }
+    weave::ErrorPtr error;
+    weave::Error::AddTo(&error, FROM_HERE, "example", "invalid_parameter_value",
+                        "Invalid parameters");
+    cmd->Abort(error.get(), nullptr);
+  }
+
+  void OnUnhandledCommand(const std::weak_ptr<weave::Command>& command) {
+    auto cmd = command.lock();
+    if (!cmd)
+      return;
+    LOG(INFO) << cmd->GetName() << " unimplemented command: ignored";
   }
 
   void UpdateLedState(void) {
@@ -105,6 +210,8 @@ class CommandHandler {
   }
 
   weave::Device* device_{nullptr};
+  weave::provider::TaskRunner* task_runner_{nullptr};
+
   int counter_{0};
 
   // Simulate LED status on this device so client app could explore
@@ -113,6 +220,13 @@ class CommandHandler {
 
   base::WeakPtrFactory<CommandHandler> weak_ptr_factory_{this};
 };
+
+void OnRegisterDeviceDone(weave::Device* device, weave::ErrorPtr error) {
+  if (error)
+    LOG(ERROR) << "Fail to register device: " << error->GetMessage();
+  else
+    LOG(INFO) << "Device registered: " << device->GetSettings().cloud_id;
+}
 
 }  // namespace
 
@@ -136,6 +250,13 @@ int main(int argc, char** argv) {
         return 1;
       }
       registration_ticket = arg.substr(pos + 1);
+    } else if (arg.find("--v") != std::string::npos) {
+      auto pos = arg.find("=");
+      if (pos == std::string::npos) {
+        ShowUsage(argv[0]);
+        return 1;
+      }
+      logging::SetMinLogLevel(-std::stoi(arg.substr(pos + 1)));
     } else {
       ShowUsage(argv[0]);
       return 1;
@@ -157,16 +278,11 @@ int main(int argc, char** argv) {
       &bluetooth);
 
   if (!registration_ticket.empty()) {
-    weave::ErrorPtr error;
-    auto device_id = device->Register(registration_ticket, &error);
-    if (error != nullptr) {
-      LOG(ERROR) << "Fail to register device: " << error->GetMessage();
-    } else {
-      LOG(INFO) << "Device registered: " << device_id;
-    }
+    device->Register(registration_ticket,
+                     base::Bind(&OnRegisterDeviceDone, device.get()));
   }
 
-  CommandHandler handler(device.get());
+  CommandHandler handler(device.get(), &task_runner);
   task_runner.Run();
 
   LOG(INFO) << "exit";

@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -8,6 +8,7 @@
 #include <base/json/json_writer.h>
 #include <base/values.h>
 #include <gtest/gtest.h>
+#include <weave/provider/test/fake_task_runner.h>
 #include <weave/provider/test/mock_config_store.h>
 #include <weave/provider/test/mock_http_client.h>
 
@@ -76,12 +77,14 @@ std::string GetFormField(const std::string& data, const std::string& name) {
   return {};
 }
 
-HttpClient::Response* ReplyWithJson(int status_code, const base::Value& json) {
+std::unique_ptr<HttpClient::Response> ReplyWithJson(int status_code,
+                                                    const base::Value& json) {
   std::string text;
   base::JSONWriter::WriteWithOptions(
       json, base::JSONWriter::OPTIONS_PRETTY_PRINT, &text);
 
-  MockHttpClientResponse* response = new StrictMock<MockHttpClientResponse>;
+  std::unique_ptr<MockHttpClientResponse> response{
+      new StrictMock<MockHttpClientResponse>};
   EXPECT_CALL(*response, GetStatusCode())
       .Times(AtLeast(1))
       .WillRepeatedly(Return(status_code));
@@ -90,8 +93,8 @@ HttpClient::Response* ReplyWithJson(int status_code, const base::Value& json) {
       .WillRepeatedly(Return(http::kJsonUtf8));
   EXPECT_CALL(*response, GetData())
       .Times(AtLeast(1))
-      .WillRepeatedly(ReturnRefOfCopy(text));
-  return response;
+      .WillRepeatedly(Return(text));
+  return std::move(response);
 }
 
 std::pair<std::string, std::string> GetAuthHeader() {
@@ -123,7 +126,7 @@ class DeviceRegistrationInfoTest : public ::testing::Test {
     std::unique_ptr<Config> config{new Config{&config_store_}};
     config_ = config.get();
     dev_reg_.reset(new DeviceRegistrationInfo{command_manager_, state_manager_,
-                                              std::move(config), nullptr,
+                                              std::move(config), &task_runner_,
                                               &http_client_, nullptr});
 
     ReloadDefaults();
@@ -163,18 +166,19 @@ class DeviceRegistrationInfoTest : public ::testing::Test {
   }
 
   void PublishCommands(const base::ListValue& commands) {
-    return dev_reg_->PublishCommands(commands);
+    dev_reg_->PublishCommands(commands, nullptr);
   }
 
   bool RefreshAccessToken(ErrorPtr* error) const {
     bool succeeded = false;
-    auto on_success = [&succeeded]() { succeeded = true; };
-    auto on_failure = [&error](const Error* in_error) {
-      if (error)
-        *error = in_error->Clone();
+    auto callback = [&succeeded, &error](ErrorPtr in_error) {
+      if (error) {
+        *error = std::move(in_error);
+        return;
+      }
+      succeeded = true;
     };
-    dev_reg_->RefreshAccessToken(base::Bind(on_success),
-                                 base::Bind(on_failure));
+    dev_reg_->RefreshAccessToken(base::Bind(callback));
     return succeeded;
   }
 
@@ -182,6 +186,7 @@ class DeviceRegistrationInfoTest : public ::testing::Test {
 
   GcdState GetGcdState() const { return dev_reg_->GetGcdState(); }
 
+  provider::test::FakeTaskRunner task_runner_;
   provider::test::MockConfigStore config_store_;
   StrictMock<MockHttpClient> http_client_;
   base::DictionaryValue data_;
@@ -192,7 +197,6 @@ class DeviceRegistrationInfoTest : public ::testing::Test {
   std::shared_ptr<StateManager> state_manager_;
 };
 
-////////////////////////////////////////////////////////////////////////////////
 TEST_F(DeviceRegistrationInfoTest, GetServiceURL) {
   EXPECT_EQ(test_data::kServiceURL, dev_reg_->GetServiceURL());
   std::string url = test_data::kServiceURL;
@@ -230,10 +234,13 @@ TEST_F(DeviceRegistrationInfoTest, HaveRegistrationCredentials) {
   EXPECT_FALSE(dev_reg_->HaveRegistrationCredentials());
   ReloadSettings();
 
-  EXPECT_CALL(http_client_,
-              MockSendRequest(http::kPost, dev_reg_->GetOAuthURL("token"),
-                              HttpClient::Headers{GetFormHeader()}, _, _))
-      .WillOnce(WithArgs<3>(Invoke([](const std::string& data) {
+  EXPECT_CALL(
+      http_client_,
+      SendRequest(HttpClient::Method::kPost, dev_reg_->GetOAuthURL("token"),
+                  HttpClient::Headers{GetFormHeader()}, _, _))
+      .WillOnce(WithArgs<3, 4>(Invoke([](
+          const std::string& data,
+          const HttpClient::SendRequestCallback& callback) {
         EXPECT_EQ("refresh_token", GetFormField(data, "grant_type"));
         EXPECT_EQ(test_data::kRefreshToken,
                   GetFormField(data, "refresh_token"));
@@ -245,7 +252,7 @@ TEST_F(DeviceRegistrationInfoTest, HaveRegistrationCredentials) {
         json.SetString("access_token", test_data::kAccessToken);
         json.SetInteger("expires_in", 3600);
 
-        return ReplyWithJson(200, json);
+        callback.Run(ReplyWithJson(200, json), nullptr);
       })));
 
   EXPECT_TRUE(RefreshAccessToken(nullptr));
@@ -256,10 +263,13 @@ TEST_F(DeviceRegistrationInfoTest, CheckAuthenticationFailure) {
   ReloadSettings();
   EXPECT_EQ(GcdState::kConnecting, GetGcdState());
 
-  EXPECT_CALL(http_client_,
-              MockSendRequest(http::kPost, dev_reg_->GetOAuthURL("token"),
-                              HttpClient::Headers{GetFormHeader()}, _, _))
-      .WillOnce(WithArgs<3>(Invoke([](const std::string& data) {
+  EXPECT_CALL(
+      http_client_,
+      SendRequest(HttpClient::Method::kPost, dev_reg_->GetOAuthURL("token"),
+                  HttpClient::Headers{GetFormHeader()}, _, _))
+      .WillOnce(WithArgs<3, 4>(Invoke([](
+          const std::string& data,
+          const HttpClient::SendRequestCallback& callback) {
         EXPECT_EQ("refresh_token", GetFormField(data, "grant_type"));
         EXPECT_EQ(test_data::kRefreshToken,
                   GetFormField(data, "refresh_token"));
@@ -269,7 +279,7 @@ TEST_F(DeviceRegistrationInfoTest, CheckAuthenticationFailure) {
 
         base::DictionaryValue json;
         json.SetString("error", "unable_to_authenticate");
-        return ReplyWithJson(400, json);
+        callback.Run(ReplyWithJson(400, json), nullptr);
       })));
 
   ErrorPtr error;
@@ -282,10 +292,13 @@ TEST_F(DeviceRegistrationInfoTest, CheckDeregistration) {
   ReloadSettings();
   EXPECT_EQ(GcdState::kConnecting, GetGcdState());
 
-  EXPECT_CALL(http_client_,
-              MockSendRequest(http::kPost, dev_reg_->GetOAuthURL("token"),
-                              HttpClient::Headers{GetFormHeader()}, _, _))
-      .WillOnce(WithArgs<3>(Invoke([](const std::string& data) {
+  EXPECT_CALL(
+      http_client_,
+      SendRequest(HttpClient::Method::kPost, dev_reg_->GetOAuthURL("token"),
+                  HttpClient::Headers{GetFormHeader()}, _, _))
+      .WillOnce(WithArgs<3, 4>(Invoke([](
+          const std::string& data,
+          const HttpClient::SendRequestCallback& callback) {
         EXPECT_EQ("refresh_token", GetFormField(data, "grant_type"));
         EXPECT_EQ(test_data::kRefreshToken,
                   GetFormField(data, "refresh_token"));
@@ -295,7 +308,7 @@ TEST_F(DeviceRegistrationInfoTest, CheckDeregistration) {
 
         base::DictionaryValue json;
         json.SetString("error", "invalid_grant");
-        return ReplyWithJson(400, json);
+        callback.Run(ReplyWithJson(400, json), nullptr);
       })));
 
   ErrorPtr error;
@@ -308,30 +321,31 @@ TEST_F(DeviceRegistrationInfoTest, GetDeviceInfo) {
   ReloadSettings();
   SetAccessToken();
 
-  EXPECT_CALL(http_client_,
-              MockSendRequest(
-                  http::kGet, dev_reg_->GetDeviceURL(),
+  EXPECT_CALL(
+      http_client_,
+      SendRequest(HttpClient::Method::kGet, dev_reg_->GetDeviceURL(),
                   HttpClient::Headers{GetAuthHeader(), GetJsonHeader()}, _, _))
-      .WillOnce(WithArgs<3>(Invoke([](const std::string& data) {
-        base::DictionaryValue json;
-        json.SetString("channel.supportedType", "xmpp");
-        json.SetString("deviceKind", "vendor");
-        json.SetString("id", test_data::kDeviceId);
-        json.SetString("kind", "clouddevices#device");
-        return ReplyWithJson(200, json);
-      })));
+      .WillOnce(WithArgs<3, 4>(
+          Invoke([](const std::string& data,
+                    const HttpClient::SendRequestCallback& callback) {
+            base::DictionaryValue json;
+            json.SetString("channel.supportedType", "xmpp");
+            json.SetString("deviceKind", "vendor");
+            json.SetString("id", test_data::kDeviceId);
+            json.SetString("kind", "clouddevices#device");
+            callback.Run(ReplyWithJson(200, json), nullptr);
+          })));
 
   bool succeeded = false;
-  auto on_success = [&succeeded, this](const base::DictionaryValue& info) {
+  auto callback = [&succeeded, this](const base::DictionaryValue& info,
+                                     ErrorPtr error) {
+    EXPECT_FALSE(error);
     std::string id;
     EXPECT_TRUE(info.GetString("id", &id));
     EXPECT_EQ(test_data::kDeviceId, id);
     succeeded = true;
   };
-  auto on_failure = [](const Error* error) {
-    FAIL() << "Should not be called";
-  };
-  dev_reg_->GetDeviceInfo(base::Bind(on_success), base::Bind(on_failure));
+  dev_reg_->GetDeviceInfo(base::Bind(callback));
   EXPECT_TRUE(succeeded);
 }
 
@@ -371,11 +385,13 @@ TEST_F(DeviceRegistrationInfoTest, RegisterDevice) {
 
   std::string ticket_url = dev_reg_->GetServiceURL("registrationTickets/") +
                            test_data::kClaimTicketId;
-  EXPECT_CALL(
-      http_client_,
-      MockSendRequest(http::kPatch, ticket_url + "?key=" + test_data::kApiKey,
-                      HttpClient::Headers{GetJsonHeader()}, _, _))
-      .WillOnce(WithArgs<3>(Invoke([](const std::string& data) {
+  EXPECT_CALL(http_client_,
+              SendRequest(HttpClient::Method::kPatch,
+                          ticket_url + "?key=" + test_data::kApiKey,
+                          HttpClient::Headers{GetJsonHeader()}, _, _))
+      .WillOnce(WithArgs<3, 4>(Invoke([](
+          const std::string& data,
+          const HttpClient::SendRequestCallback& callback) {
         auto json = test::CreateDictionaryValue(data);
         EXPECT_NE(nullptr, json.get());
         std::string value;
@@ -435,32 +451,36 @@ TEST_F(DeviceRegistrationInfoTest, RegisterDevice) {
         device_draft->SetString("kind", "clouddevices#device");
         json_resp.Set("deviceDraft", device_draft);
 
-        return ReplyWithJson(200, json_resp);
+        callback.Run(ReplyWithJson(200, json_resp), nullptr);
       })));
 
   EXPECT_CALL(http_client_,
-              MockSendRequest(http::kPost, ticket_url + "/finalize?key=" +
-                                               test_data::kApiKey,
-                              HttpClient::Headers{}, _, _))
-      .WillOnce(InvokeWithoutArgs([]() {
-        base::DictionaryValue json;
-        json.SetString("id", test_data::kClaimTicketId);
-        json.SetString("kind", "clouddevices#registrationTicket");
-        json.SetString("oauthClientId", test_data::kClientId);
-        json.SetString("userEmail", "user@email.com");
-        json.SetString("deviceDraft.id", test_data::kDeviceId);
-        json.SetString("deviceDraft.kind", "clouddevices#device");
-        json.SetString("deviceDraft.channel.supportedType", "xmpp");
-        json.SetString("robotAccountEmail", test_data::kRobotAccountEmail);
-        json.SetString("robotAccountAuthorizationCode",
-                       test_data::kRobotAccountAuthCode);
-        return ReplyWithJson(200, json);
-      }));
+              SendRequest(HttpClient::Method::kPost,
+                          ticket_url + "/finalize?key=" + test_data::kApiKey,
+                          HttpClient::Headers{}, _, _))
+      .WillOnce(WithArgs<4>(
+          Invoke([](const HttpClient::SendRequestCallback& callback) {
+            base::DictionaryValue json;
+            json.SetString("id", test_data::kClaimTicketId);
+            json.SetString("kind", "clouddevices#registrationTicket");
+            json.SetString("oauthClientId", test_data::kClientId);
+            json.SetString("userEmail", "user@email.com");
+            json.SetString("deviceDraft.id", test_data::kDeviceId);
+            json.SetString("deviceDraft.kind", "clouddevices#device");
+            json.SetString("deviceDraft.channel.supportedType", "xmpp");
+            json.SetString("robotAccountEmail", test_data::kRobotAccountEmail);
+            json.SetString("robotAccountAuthorizationCode",
+                           test_data::kRobotAccountAuthCode);
+            callback.Run(ReplyWithJson(200, json), nullptr);
+          })));
 
-  EXPECT_CALL(http_client_,
-              MockSendRequest(http::kPost, dev_reg_->GetOAuthURL("token"),
-                              HttpClient::Headers{GetFormHeader()}, _, _))
-      .WillOnce(WithArgs<3>(Invoke([](const std::string& data) {
+  EXPECT_CALL(
+      http_client_,
+      SendRequest(HttpClient::Method::kPost, dev_reg_->GetOAuthURL("token"),
+                  HttpClient::Headers{GetFormHeader()}, _, _))
+      .WillOnce(WithArgs<3, 4>(Invoke([](
+          const std::string& data,
+          const HttpClient::SendRequestCallback& callback) {
         EXPECT_EQ("authorization_code", GetFormField(data, "grant_type"));
         EXPECT_EQ(test_data::kRobotAccountAuthCode, GetFormField(data, "code"));
         EXPECT_EQ(test_data::kClientId, GetFormField(data, "client_id"));
@@ -477,20 +497,26 @@ TEST_F(DeviceRegistrationInfoTest, RegisterDevice) {
         json.SetString("refresh_token", test_data::kRefreshToken);
         json.SetInteger("expires_in", 3600);
 
-        return ReplyWithJson(200, json);
+        callback.Run(ReplyWithJson(200, json), nullptr);
       })));
 
-  std::string cloud_id =
-      dev_reg_->RegisterDevice(test_data::kClaimTicketId, nullptr);
+  bool done = false;
+  dev_reg_->RegisterDevice(
+      test_data::kClaimTicketId, base::Bind([this, &done](ErrorPtr error) {
+        EXPECT_FALSE(error);
+        done = true;
+        task_runner_.Break();
+        EXPECT_EQ(GcdState::kConnecting, GetGcdState());
 
-  EXPECT_EQ(test_data::kDeviceId, cloud_id);
-  EXPECT_EQ(GcdState::kConnecting, GetGcdState());
-
-  // Validate the device info saved to storage...
-  EXPECT_EQ(test_data::kDeviceId, dev_reg_->GetSettings().cloud_id);
-  EXPECT_EQ(test_data::kRefreshToken, dev_reg_->GetSettings().refresh_token);
-  EXPECT_EQ(test_data::kRobotAccountEmail,
-            dev_reg_->GetSettings().robot_account);
+        // Validate the device info saved to storage...
+        EXPECT_EQ(test_data::kDeviceId, dev_reg_->GetSettings().cloud_id);
+        EXPECT_EQ(test_data::kRefreshToken,
+                  dev_reg_->GetSettings().refresh_token);
+        EXPECT_EQ(test_data::kRobotAccountEmail,
+                  dev_reg_->GetSettings().robot_account);
+      }));
+  task_runner_.Run();
+  EXPECT_TRUE(done);
 }
 
 TEST_F(DeviceRegistrationInfoTest, OOBRegistrationStatus) {
@@ -502,83 +528,100 @@ TEST_F(DeviceRegistrationInfoTest, OOBRegistrationStatus) {
   EXPECT_EQ(GcdState::kConnecting, GetGcdState());
 }
 
-TEST_F(DeviceRegistrationInfoTest, UpdateCommand) {
-  ReloadSettings();
-  SetAccessToken();
+class DeviceRegistrationInfoUpdateCommandTest
+    : public DeviceRegistrationInfoTest {
+ protected:
+  void SetUp() override {
+    DeviceRegistrationInfoTest::SetUp();
 
-  auto json_cmds = CreateDictionaryValue(R"({
-    'robot': {
-      '_jump': {
-        'parameters': {'_height': 'integer'},
-        'progress': {'progress': 'integer'},
-        'results': {'status': 'string'},
-        'minimalRole': 'user'
+    ReloadSettings();
+    SetAccessToken();
+
+    auto json_cmds = CreateDictionaryValue(R"({
+      'robot': {
+        '_jump': {
+          'parameters': {'_height': 'integer'},
+          'progress': {'progress': 'integer'},
+          'results': {'status': 'string'},
+          'minimalRole': 'user'
+        }
       }
-    }
-  })");
-  EXPECT_TRUE(command_manager_->LoadCommands(*json_cmds, nullptr));
+    })");
+    EXPECT_TRUE(command_manager_->LoadCommands(*json_cmds, nullptr));
 
-  const std::string command_url = dev_reg_->GetServiceURL("commands/1234");
+    command_url_ = dev_reg_->GetServiceURL("commands/1234");
 
-  auto commands_json = CreateValue(R"([{
-    'name':'robot._jump',
-    'id':'1234',
-    'parameters': {'_height': 100},
-    'minimalRole': 'user'
-  }])");
-  ASSERT_NE(nullptr, commands_json.get());
-  const base::ListValue* command_list = nullptr;
-  ASSERT_TRUE(commands_json->GetAsList(&command_list));
-  PublishCommands(*command_list);
-  auto command = command_manager_->FindCommand("1234");
-  ASSERT_NE(nullptr, command);
+    auto commands_json = CreateValue(R"([{
+      'name':'robot._jump',
+      'id':'1234',
+      'parameters': {'_height': 100},
+      'minimalRole': 'user'
+    }])");
+    ASSERT_NE(nullptr, commands_json.get());
+    const base::ListValue* command_list = nullptr;
+    ASSERT_TRUE(commands_json->GetAsList(&command_list));
+    PublishCommands(*command_list);
+    command_ = command_manager_->FindCommand("1234");
+    ASSERT_NE(nullptr, command_);
+  }
 
-  EXPECT_CALL(http_client_,
-              MockSendRequest(
-                  http::kPatch, command_url,
+  void TearDown() override {
+    task_runner_.RunOnce();
+    DeviceRegistrationInfoTest::TearDown();
+  }
+
+  Command* command_{nullptr};
+  std::string command_url_;
+};
+
+TEST_F(DeviceRegistrationInfoUpdateCommandTest, SetProgress) {
+  EXPECT_CALL(
+      http_client_,
+      SendRequest(HttpClient::Method::kPatch, command_url_,
                   HttpClient::Headers{GetAuthHeader(), GetJsonHeader()}, _, _))
-      .WillOnce(WithArgs<3>(Invoke([](const std::string& data) {
-        EXPECT_JSON_EQ(R"({"results":{"status":"Ok"}})",
+      .WillOnce(WithArgs<3, 4>(Invoke([](
+          const std::string& data,
+          const HttpClient::SendRequestCallback& callback) {
+        EXPECT_JSON_EQ((R"({"state":"inProgress","progress":{"progress":18}})"),
                        *CreateDictionaryValue(data));
         base::DictionaryValue json;
-        return ReplyWithJson(200, json);
+        callback.Run(ReplyWithJson(200, json), nullptr);
+      })));
+  EXPECT_TRUE(command_->SetProgress(*CreateDictionaryValue("{'progress':18}"),
+                                    nullptr));
+}
+
+TEST_F(DeviceRegistrationInfoUpdateCommandTest, Complete) {
+  EXPECT_CALL(
+      http_client_,
+      SendRequest(HttpClient::Method::kPatch, command_url_,
+                  HttpClient::Headers{GetAuthHeader(), GetJsonHeader()}, _, _))
+      .WillOnce(WithArgs<3, 4>(Invoke([](
+          const std::string& data,
+          const HttpClient::SendRequestCallback& callback) {
+        EXPECT_JSON_EQ(R"({"state":"done", "results":{"status":"Ok"}})",
+                       *CreateDictionaryValue(data));
+        base::DictionaryValue json;
+        callback.Run(ReplyWithJson(200, json), nullptr);
       })));
   EXPECT_TRUE(
-      command->SetResults(*CreateDictionaryValue("{'status': 'Ok'}"), nullptr));
-  Mock::VerifyAndClearExpectations(&http_client_);
+      command_->Complete(*CreateDictionaryValue("{'status': 'Ok'}"), nullptr));
+}
 
-  EXPECT_CALL(http_client_,
-              MockSendRequest(
-                  http::kPatch, command_url,
+TEST_F(DeviceRegistrationInfoUpdateCommandTest, Cancel) {
+  EXPECT_CALL(
+      http_client_,
+      SendRequest(HttpClient::Method::kPatch, command_url_,
                   HttpClient::Headers{GetAuthHeader(), GetJsonHeader()}, _, _))
-      .WillOnce(WithArgs<3>(Invoke([](const std::string& data) {
-        EXPECT_JSON_EQ(R"({"state":"inProgress"})",
-                       *CreateDictionaryValue(data));
-        base::DictionaryValue json;
-        return ReplyWithJson(200, json);
-      })))
-      .WillOnce(WithArgs<3>(Invoke([](const std::string& data) {
-        EXPECT_JSON_EQ(R"({"progress":{"progress":18}})",
-                       *CreateDictionaryValue(data));
-        base::DictionaryValue json;
-        return ReplyWithJson(200, json);
-      })));
-  EXPECT_TRUE(
-      command->SetProgress(*CreateDictionaryValue("{'progress':18}"), nullptr));
-  Mock::VerifyAndClearExpectations(&http_client_);
-
-  EXPECT_CALL(http_client_,
-              MockSendRequest(
-                  http::kPatch, command_url,
-                  HttpClient::Headers{GetAuthHeader(), GetJsonHeader()}, _, _))
-      .WillOnce(WithArgs<3>(Invoke([](const std::string& data) {
+      .WillOnce(WithArgs<3, 4>(Invoke([](
+          const std::string& data,
+          const HttpClient::SendRequestCallback& callback) {
         EXPECT_JSON_EQ(R"({"state":"cancelled"})",
                        *CreateDictionaryValue(data));
         base::DictionaryValue json;
-        return ReplyWithJson(200, json);
+        callback.Run(ReplyWithJson(200, json), nullptr);
       })));
-  command->Cancel();
-  Mock::VerifyAndClearExpectations(&http_client_);
+  EXPECT_TRUE(command_->Cancel(nullptr));
 }
 
 }  // namespace weave

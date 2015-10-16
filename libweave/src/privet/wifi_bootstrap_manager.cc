@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium OS Authors. All rights reserved.
+// Copyright 2015 The Weave Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -59,7 +59,7 @@ void WifiBootstrapManager::Init() {
 }
 
 void WifiBootstrapManager::StartBootstrapping() {
-  if (network_->GetConnectionState() == Network::State::kConnected) {
+  if (network_->GetConnectionState() == Network::State::kOnline) {
     // If one of the devices we monitor for connectivity is online, we need not
     // start an AP.  For most devices, this is a situation which happens in
     // testing when we have an ethernet connection.  If you need to always
@@ -96,22 +96,12 @@ void WifiBootstrapManager::StartConnecting(const std::string& ssid,
           << ", pass=" << passphrase << ").";
   UpdateState(State::kConnecting);
   task_runner_->PostDelayedTask(
-      FROM_HERE, base::Bind(&WifiBootstrapManager::OnConnectError,
-                            tasks_weak_factory_.GetWeakPtr(), nullptr),
+      FROM_HERE, base::Bind(&WifiBootstrapManager::OnConnectTimeout,
+                            tasks_weak_factory_.GetWeakPtr()),
       base::TimeDelta::FromMinutes(3));
   wifi_->Connect(ssid, passphrase,
-                 base::Bind(&WifiBootstrapManager::OnConnectSuccess,
-                            tasks_weak_factory_.GetWeakPtr(), ssid),
-                 base::Bind(&WifiBootstrapManager::OnConnectError,
-                            tasks_weak_factory_.GetWeakPtr()));
-}
-
-void WifiBootstrapManager::OnConnectError(const Error* error) {
-  ErrorPtr new_error = error ? error->Clone() : nullptr;
-  Error::AddTo(&new_error, FROM_HERE, errors::kDomain, errors::kInvalidState,
-               "Failed to connect to provided network");
-  setup_state_ = SetupState{std::move(new_error)};
-  StartBootstrapping();
+                 base::Bind(&WifiBootstrapManager::OnConnectDone,
+                            tasks_weak_factory_.GetWeakPtr(), ssid));
 }
 
 void WifiBootstrapManager::EndConnecting() {}
@@ -122,7 +112,7 @@ void WifiBootstrapManager::StartMonitoring() {
   // connectivity state.  See OnConnectivityChange().
   UpdateState(State::kMonitoring);
 
-  if (network_->GetConnectionState() == Network::State::kConnected) {
+  if (network_->GetConnectionState() == Network::State::kOnline) {
     monitor_until_ = {};
   } else {
     if (monitor_until_.is_null()) {
@@ -204,13 +194,28 @@ std::set<WifiType> WifiBootstrapManager::GetTypes() const {
   return {WifiType::kWifi24};
 }
 
-void WifiBootstrapManager::OnConnectSuccess(const std::string& ssid) {
+void WifiBootstrapManager::OnConnectDone(const std::string& ssid,
+                                         ErrorPtr error) {
+  if (error) {
+    Error::AddTo(&error, FROM_HERE, errors::kDomain, errors::kInvalidState,
+                 "Failed to connect to provided network");
+    setup_state_ = SetupState{std::move(error)};
+    return StartBootstrapping();
+  }
   VLOG(1) << "Wifi was connected successfully";
   Config::Transaction change{config_};
   change.set_last_configured_ssid(ssid);
   change.Commit();
   setup_state_ = SetupState{SetupState::kSuccess};
   StartMonitoring();
+}
+
+void WifiBootstrapManager::OnConnectTimeout() {
+  ErrorPtr error;
+  Error::AddTo(&error, FROM_HERE, errors::kDomain, errors::kInvalidState,
+               "Timeout connecting to provided network");
+  setup_state_ = SetupState{std::move(error)};
+  return StartBootstrapping();
 }
 
 void WifiBootstrapManager::OnBootstrapTimeout() {
@@ -225,7 +230,7 @@ void WifiBootstrapManager::OnConnectivityChange() {
 
   if (state_ == State::kMonitoring ||  // Reset monitoring timeout.
       (state_ != State::kDisabled &&
-       network_->GetConnectionState() == Network::State::kConnected)) {
+       network_->GetConnectionState() == Network::State::kOnline)) {
     StartMonitoring();
   }
 }
@@ -246,7 +251,7 @@ void WifiBootstrapManager::UpdateConnectionState() {
     case Network::State::kOffline:
       connection_state_ = ConnectionState{ConnectionState::kOffline};
       return;
-    case Network::State::kFailure: {
+    case Network::State::kError: {
       // TODO(wiley) Pull error information from somewhere.
       ErrorPtr error;
       Error::AddTo(&error, FROM_HERE, errors::kDomain, errors::kInvalidState,
@@ -257,7 +262,7 @@ void WifiBootstrapManager::UpdateConnectionState() {
     case Network::State::kConnecting:
       connection_state_ = ConnectionState{ConnectionState::kConnecting};
       return;
-    case Network::State::kConnected:
+    case Network::State::kOnline:
       connection_state_ = ConnectionState{ConnectionState::kOnline};
       return;
   }
