@@ -47,7 +47,7 @@ class Network {
                              const OpenSslSocketCallback& callback) = 0;
 
  protected:
-  virtual ~Network() {}
+  virtual ~Network() = default;
 };
 
 }  // namespace provider

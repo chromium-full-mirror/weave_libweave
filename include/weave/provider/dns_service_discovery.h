@@ -91,7 +91,7 @@ class DnsServiceDiscovery {
   virtual void StopPublishing(const std::string& service_type) = 0;
 
  protected:
-  virtual ~DnsServiceDiscovery() {}
+  virtual ~DnsServiceDiscovery() = default;
 };
 
 }  // namespace provider

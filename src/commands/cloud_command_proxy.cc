@@ -9,6 +9,8 @@
 #include <weave/provider/task_runner.h>
 
 #include "src/commands/command_instance.h"
+#include "src/commands/prop_constraints.h"
+#include "src/commands/prop_types.h"
 #include "src/commands/schema_constants.h"
 #include "src/utils.h"
 
@@ -43,7 +45,7 @@ void CloudCommandProxy::OnErrorChanged() {
 void CloudCommandProxy::OnResultsChanged() {
   std::unique_ptr<base::DictionaryValue> patch{new base::DictionaryValue};
   patch->Set(commands::attributes::kCommand_Results,
-             command_instance_->GetResults().CreateDeepCopy());
+             command_instance_->GetResults().release());
   QueueCommandUpdate(std::move(patch));
 }
 
@@ -57,7 +59,7 @@ void CloudCommandProxy::OnStateChanged() {
 void CloudCommandProxy::OnProgressChanged() {
   std::unique_ptr<base::DictionaryValue> patch{new base::DictionaryValue};
   patch->Set(commands::attributes::kCommand_Progress,
-             command_instance_->GetProgress().CreateDeepCopy());
+             command_instance_->GetProgress().release());
   QueueCommandUpdate(std::move(patch));
 }
 

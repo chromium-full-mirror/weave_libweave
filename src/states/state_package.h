@@ -10,8 +10,14 @@
 #include <string>
 
 #include <base/macros.h>
-#include <base/values.h>
 #include <weave/error.h>
+
+#include "src/commands/object_schema.h"
+#include "src/commands/prop_values.h"
+
+namespace base {
+class DictionaryValue;
+}  // namespace base
 
 namespace weave {
 
@@ -43,25 +49,33 @@ class StatePackage final {
   //      "message": "Printer low on cyan ink"
   //    }
   //  }
-  const base::DictionaryValue& GetValuesAsJson() const;
+  std::unique_ptr<base::DictionaryValue> GetValuesAsJson() const;
 
   // Gets the value for a specific state property. |property_name| must not
   // include the package name as part of the property name.
-  const base::Value* GetPropertyValue(const std::string& property_name,
-                                      ErrorPtr* error) const;
+  std::unique_ptr<base::Value> GetPropertyValue(
+      const std::string& property_name,
+      ErrorPtr* error) const;
   // Sets the value for a specific state property. |property_name| must not
   // include the package name as part of the property name.
   bool SetPropertyValue(const std::string& property_name,
                         const base::Value& value,
                         ErrorPtr* error);
 
+  std::shared_ptr<const PropValue> GetProperty(
+      const std::string& property_name) const {
+    auto it = values_.find(property_name);
+    return it != values_.end() ? it->second
+                               : std::shared_ptr<const PropValue>{};
+  }
+
   // Returns the name of the this package.
   const std::string& GetName() const { return name_; }
 
  private:
   std::string name_;
-  base::DictionaryValue types_;
-  base::DictionaryValue values_;
+  ObjectSchema types_;
+  ValueMap values_;
 
   friend class StatePackageTestHelper;
   DISALLOW_COPY_AND_ASSIGN(StatePackage);

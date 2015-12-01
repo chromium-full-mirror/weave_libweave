@@ -18,31 +18,31 @@ class LightHandler {
     device_ = device;
 
     device->AddStateDefinitionsFromJson(R"({
-      "onOff": {"state": {"type": "string", "enum": ["on", "standby"]}},
-      "brightness": {"brightness": {"type": "integer"}},
+      "onOff": {"state": ["on", "standby"]},
+      "brightness": {"brightness": "integer"},
       "colorXY": {
         "colorSetting": {
           "properties": {
-            "colorX": {"type": "number", "minimum": 0.0, "maximum": 1.0},
-            "colorY": {"type": "number", "minimum": 0.0, "maximum": 1.0}
+            "colorX": {"minimum": 0.0, "maximum": 1.0},
+            "colorY": {"minimum": 0.0, "maximum": 1.0}
           }
         },
         "colorCapRed": {
           "properties": {
-            "colorX": {"type": "number", "minimum": 0.0, "maximum": 1.0},
-            "colorY": {"type": "number", "minimum": 0.0, "maximum": 1.0}
+            "colorX": {"minimum": 0.0, "maximum": 1.0},
+            "colorY": {"minimum": 0.0, "maximum": 1.0}
           }
         },
         "colorCapGreen": {
           "properties": {
-            "colorX": {"type": "number", "minimum": 0.0, "maximum": 1.0},
-            "colorY": {"type": "number", "minimum": 0.0, "maximum": 1.0}
+            "colorX": {"minimum": 0.0, "maximum": 1.0},
+            "colorY": {"minimum": 0.0, "maximum": 1.0}
           }
         },
         "colorCapBlue": {
           "properties": {
-            "colorX": {"type": "number", "minimum": 0.0, "maximum": 1.0},
-            "colorY": {"type": "number", "minimum": 0.0, "maximum": 1.0}
+            "colorX": {"minimum": 0.0, "maximum": 1.0},
+            "colorY": {"minimum": 0.0, "maximum": 1.0}
           }
         }
       }
@@ -62,23 +62,21 @@ class LightHandler {
 
     device->AddCommandDefinitionsFromJson(R"({
       "onOff": {
-        "setConfig":{
-          "minimalRole": "user",
-          "parameters": {
-            "state": {"type": "string", "enum": ["on", "standby"]}
-          }
-        }
-      },
-      "brightness": {
-        "setConfig":{
-          "minimalRole": "user",
-          "parameters": {
-            "brightness": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 100
-            }
-          }
+         "setConfig":{
+           "parameters": {
+             "state": ["on", "standby"]
+           }
+         }
+       },
+       "brightness": {
+         "setConfig":{
+           "parameters": {
+             "brightness": {
+               "type": "integer",
+               "minimum": 0,
+               "maximum": 100
+             }
+           }
         }
       },
       "_colorXY": {
@@ -90,16 +88,15 @@ class LightHandler {
               "properties": {
                 "_colorX": {
                   "type": "number",
-                  "minimum": 0.0,
-                  "maximum": 1.0
+                  "minimum": 0,
+                  "maximum": 1
                 },
                 "_colorY": {
                   "type": "number",
-                  "minimum": 0.0,
-                  "maximum": 1.0
+                  "minimum": 0,
+                  "maximum": 1
                 }
-              },
-              "additionalProperties": false
+              }
             }
           }
         }
@@ -122,9 +119,8 @@ class LightHandler {
     if (!cmd)
       return;
     LOG(INFO) << "received command: " << cmd->GetName();
-    const auto& params = cmd->GetParameters();
     int32_t brightness_value = 0;
-    if (params.GetInteger("brightness", &brightness_value)) {
+    if (cmd->GetParameters()->GetInteger("brightness", &brightness_value)) {
       // Display this command in terminal.
       LOG(INFO) << cmd->GetName() << " brightness: " << brightness_value;
 
@@ -146,9 +142,8 @@ class LightHandler {
     if (!cmd)
       return;
     LOG(INFO) << "received command: " << cmd->GetName();
-    const auto& params = cmd->GetParameters();
     std::string requested_state;
-    if (params.GetString("state", &requested_state)) {
+    if (cmd->GetParameters()->GetString("state", &requested_state)) {
       LOG(INFO) << cmd->GetName() << " state: " << requested_state;
 
       bool new_light_status = requested_state == "on";
@@ -172,9 +167,9 @@ class LightHandler {
     if (!cmd)
       return;
     LOG(INFO) << "received command: " << cmd->GetName();
-    const auto& params = cmd->GetParameters();
-    const base::DictionaryValue* colorXY = nullptr;
-    if (params.GetDictionary("_colorSetting", &colorXY)) {
+    auto params = cmd->GetParameters();
+    base::DictionaryValue* colorXY = nullptr;
+    if (params->GetDictionary("_colorSetting", &colorXY)) {
       bool updateState = false;
       double X = 0.0;
       double Y = 0.0;

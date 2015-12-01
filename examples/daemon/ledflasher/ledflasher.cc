@@ -25,7 +25,7 @@ class LedFlasherHandler {
     device_ = device;
 
     device->AddStateDefinitionsFromJson(R"({
-      "_ledflasher": {"_leds": {"type": "array", "items": {"type": "boolean"}}}
+      "_ledflasher": {"_leds": {"items": "boolean"}}
     })");
 
     device->SetStatePropertiesFromJson(R"({
@@ -35,18 +35,16 @@ class LedFlasherHandler {
 
     device->AddCommandDefinitionsFromJson(R"({
       "_ledflasher": {
-        "_set":{
-          "minimalRole": "user",
-          "parameters": {
-            "_led": {"type": "integer", "minimum": 1, "maximum": 3},
-            "_on": {"type": "boolean"}
-          }
-        },
-        "_toggle":{
-          "minimalRole": "user",
-          "parameters": {
-            "_led": {"type": "integer", "minimum": 1, "maximum": 3}
-          }
+         "_set":{
+           "parameters": {
+             "_led": {"minimum": 1, "maximum": 3},
+             "_on": "boolean"
+           }
+         },
+         "_toggle":{
+           "parameters": {
+             "_led": {"minimum": 1, "maximum": 3}
+           }
         }
       }
     })");
@@ -66,10 +64,9 @@ class LedFlasherHandler {
       return;
     LOG(INFO) << "received command: " << cmd->GetName();
     int32_t led_index = 0;
-    const auto& params = cmd->GetParameters();
     bool cmd_value = false;
-    if (params.GetInteger("_led", &led_index) &&
-        params.GetBoolean("_on", &cmd_value)) {
+    if (cmd->GetParameters()->GetInteger("_led", &led_index) &&
+        cmd->GetParameters()->GetBoolean("_on", &cmd_value)) {
       // Display this command in terminal
       LOG(INFO) << cmd->GetName() << " _led: " << led_index
                 << ", _on: " << (cmd_value ? "true" : "false");
@@ -96,9 +93,8 @@ class LedFlasherHandler {
     if (!cmd)
       return;
     LOG(INFO) << "received command: " << cmd->GetName();
-    const auto& params = cmd->GetParameters();
     int32_t led_index = 0;
-    if (params.GetInteger("_led", &led_index)) {
+    if (cmd->GetParameters()->GetInteger("_led", &led_index)) {
       LOG(INFO) << cmd->GetName() << " _led: " << led_index;
       led_index--;
       led_status_[led_index] = ~led_status_[led_index];

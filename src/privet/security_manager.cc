@@ -24,6 +24,10 @@
 #include "src/string_utils.h"
 #include "third_party/chromium/crypto/p224_spake.h"
 
+#if !defined(ARCH_CPU_LITTLE_ENDIAN)
+#error "Big-endian is not supported. See b/25017606"
+#endif
+
 namespace weave {
 namespace privet {
 
@@ -254,7 +258,7 @@ bool SecurityManager::StartPairing(PairingType mode,
   } while (confirmed_sessions_.find(session) != confirmed_sessions_.end() ||
            pending_sessions_.find(session) != pending_sessions_.end());
   std::string commitment = spake->GetMessage();
-  pending_sessions_.insert(std::make_pair(session, std::move(spake)));
+  pending_sessions_.emplace(session, std::move(spake));
 
   task_runner_->PostDelayedTask(
       FROM_HERE,
@@ -313,8 +317,7 @@ bool SecurityManager::ConfirmPairing(const std::string& session_id,
   std::vector<uint8_t> cert_hmac = HmacSha256(
       std::vector<uint8_t>(key.begin(), key.end()), certificate_fingerprint_);
   *signature = Base64Encode(cert_hmac);
-  confirmed_sessions_.insert(
-      std::make_pair(session->first, std::move(session->second)));
+  confirmed_sessions_.emplace(session->first, std::move(session->second));
   task_runner_->PostDelayedTask(
       FROM_HERE,
       base::Bind(base::IgnoreResult(&SecurityManager::CloseConfirmedSession),

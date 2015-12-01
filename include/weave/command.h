@@ -40,13 +40,13 @@ class Command {
   virtual Command::Origin GetOrigin() const = 0;
 
   // Returns the command parameters.
-  virtual const base::DictionaryValue& GetParameters() const = 0;
+  virtual std::unique_ptr<base::DictionaryValue> GetParameters() const = 0;
 
   // Returns the command progress.
-  virtual const base::DictionaryValue& GetProgress() const = 0;
+  virtual std::unique_ptr<base::DictionaryValue> GetProgress() const = 0;
 
   // Returns the command results.
-  virtual const base::DictionaryValue& GetResults() const = 0;
+  virtual std::unique_ptr<base::DictionaryValue> GetResults() const = 0;
 
   // Returns the command error.
   virtual const Error* GetError() const = 0;
@@ -79,7 +79,7 @@ class Command {
   virtual bool Cancel(ErrorPtr* error) = 0;
 
  protected:
-  virtual ~Command() {}
+  virtual ~Command() = default;
 };
 
 }  // namespace weave

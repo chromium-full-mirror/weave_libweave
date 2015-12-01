@@ -14,7 +14,7 @@ class Bluetooth {
   // TODO(rginda): Add bluetooth interface methods here.
 
  protected:
-  virtual ~Bluetooth() {}
+  virtual ~Bluetooth() = default;
 };
 
 }  // namespace provider

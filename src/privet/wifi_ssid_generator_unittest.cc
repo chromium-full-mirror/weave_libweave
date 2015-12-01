@@ -23,7 +23,7 @@ class WifiSsidGeneratorTest : public testing::Test {
 };
 
 TEST_F(WifiSsidGeneratorTest, GenerateFlagsNoHostedAp) {
-  EXPECT_EQ(ssid_generator_.GenerateFlags().size(), 2u);
+  EXPECT_EQ(ssid_generator_.GenerateFlags().size(), 2);
 
   wifi_.connection_state_ = ConnectionState{ConnectionState::kUnconfigured};
   gcd_.connection_state_ = ConnectionState{ConnectionState::kUnconfigured};
@@ -42,7 +42,7 @@ TEST_F(WifiSsidGeneratorTest, GenerateFlagsNoHostedAp) {
 TEST_F(WifiSsidGeneratorTest, GenerateFlagsWithHostedAp) {
   EXPECT_CALL(wifi_, GetHostedSsid())
       .WillRepeatedly(Return(ssid_generator_.GenerateSsid()));
-  EXPECT_EQ(ssid_generator_.GenerateFlags().size(), 2u);
+  EXPECT_EQ(ssid_generator_.GenerateFlags().size(), 2);
 
   wifi_.connection_state_ = ConnectionState{ConnectionState::kUnconfigured};
   gcd_.connection_state_ = ConnectionState{ConnectionState::kUnconfigured};
@@ -59,7 +59,7 @@ TEST_F(WifiSsidGeneratorTest, GenerateFlagsWithHostedAp) {
 }
 
 TEST_F(WifiSsidGeneratorTest, GenerateSsid31orLess) {
-  EXPECT_LE(ssid_generator_.GenerateSsid().size(), 31u);
+  EXPECT_LE(ssid_generator_.GenerateSsid().size(), 31);
 }
 
 TEST_F(WifiSsidGeneratorTest, GenerateSsidValue) {

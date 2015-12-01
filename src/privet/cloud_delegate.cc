@@ -134,9 +134,7 @@ class CloudDelegateImpl : public CloudDelegate {
   }
 
   std::string GetCloudId() const override {
-    return connection_state_.status() > ConnectionState::kUnconfigured
-               ? device_->GetSettings().cloud_id
-               : "";
+    return device_->GetSettings().cloud_id;
   }
 
   const base::DictionaryValue& GetState() const override { return state_; }
@@ -213,7 +211,7 @@ class CloudDelegateImpl : public CloudDelegate {
  private:
   void OnCommandAdded(Command* command) {
     // Set to 0 for any new unknown command.
-    command_owners_.insert(std::make_pair(command->GetID(), 0));
+    command_owners_.emplace(command->GetID(), 0);
   }
 
   void OnCommandRemoved(Command* command) {
@@ -243,15 +241,17 @@ class CloudDelegateImpl : public CloudDelegate {
 
   void OnStateChanged() {
     state_.Clear();
-    const auto& state = state_manager_->GetState();
-    state_.MergeDictionary(&state);
+    auto state = state_manager_->GetState();
+    CHECK(state);
+    state_.MergeDictionary(state.get());
     NotifyOnStateChanged();
   }
 
   void OnCommandDefChanged() {
     command_defs_.Clear();
-    auto commands =
-      command_manager_->GetCommandDictionary().GetCommandsAsJson(nullptr);
+    auto commands = command_manager_->GetCommandDictionary().GetCommandsAsJson(
+        [](const CommandDefinition* def) { return def->GetVisibility().local; },
+        true, nullptr);
     CHECK(commands);
     command_defs_.MergeDictionary(commands.get());
     NotifyOnCommandDefsChanged();

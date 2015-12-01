@@ -27,17 +27,14 @@ void StateManager::AddChangedCallback(const base::Closure& callback) {
   callback.Run();  // Force to read current state.
 }
 
-const base::DictionaryValue& StateManager::GetState() const {
-  if (!cached_dict_valid_) {
-    cached_dict_.Clear();
-    for (const auto& pair : packages_) {
-      cached_dict_.SetWithoutPathExpansion(
-          pair.first, pair.second->GetValuesAsJson().DeepCopy());
-    }
-    cached_dict_valid_ = true;
+std::unique_ptr<base::DictionaryValue> StateManager::GetState() const {
+  std::unique_ptr<base::DictionaryValue> dict{new base::DictionaryValue};
+  for (const auto& pair : packages_) {
+    auto pkg_value = pair.second->GetValuesAsJson();
+    CHECK(pkg_value);
+    dict->SetWithoutPathExpansion(pair.first, pkg_value.release());
   }
-
-  return cached_dict_;
+  return dict;
 }
 
 bool StateManager::SetProperty(const std::string& name,
@@ -49,7 +46,8 @@ bool StateManager::SetProperty(const std::string& name,
   return result;
 }
 
-const base::Value* StateManager::GetProperty(const std::string& name) const {
+std::unique_ptr<base::Value> StateManager::GetProperty(
+    const std::string& name) const {
   auto parts = SplitAtFirst(name, ".", true);
   const std::string& package_name = parts.first;
   const std::string& property_name = parts.second;
@@ -95,11 +93,8 @@ bool StateManager::SetPropertyValue(const std::string& full_property_name,
   if (!package->SetPropertyValue(property_name, value, error))
     return false;
 
-  cached_dict_valid_ = false;
-
-  std::unique_ptr<base::DictionaryValue> prop_set{new base::DictionaryValue};
-  prop_set->Set(full_property_name, value.DeepCopy());
-  state_change_queue_->NotifyPropertiesUpdated(timestamp, std::move(prop_set));
+  ValueMap prop_set{{full_property_name, package->GetProperty(property_name)}};
+  state_change_queue_->NotifyPropertiesUpdated(timestamp, prop_set);
   return true;
 }
 
@@ -222,9 +217,8 @@ StatePackage* StateManager::FindOrCreatePackage(
   StatePackage* package = FindPackage(package_name);
   if (package == nullptr) {
     std::unique_ptr<StatePackage> new_package{new StatePackage(package_name)};
-    package =
-        packages_.insert(std::make_pair(package_name, std::move(new_package)))
-            .first->second.get();
+    package = packages_.emplace(package_name, std::move(new_package))
+                  .first->second.get();
   }
   return package;
 }

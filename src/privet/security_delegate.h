@@ -19,7 +19,7 @@ namespace privet {
 // Interface to provide Security related logic for |PrivetHandler|.
 class SecurityDelegate {
  public:
-  virtual ~SecurityDelegate() {}
+  virtual ~SecurityDelegate() = default;
 
   // Creates access token for the given scope, user id and |time|.
   virtual std::string CreateAccessToken(const UserInfo& user_info,

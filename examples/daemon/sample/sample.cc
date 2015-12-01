@@ -27,23 +27,27 @@ class SampleHandler {
         "_hello": {
           "minimalRole": "user",
           "parameters": {
-            "_name": {"type": "string"}
-          }
+            "_name": "string"
+          },
+          "results": { "_reply": "string" }
         },
         "_ping": {
-          "minimalRole": "user"
+          "minimalRole": "user",
+          "results": {}
         },
         "_countdown": {
           "minimalRole": "user",
           "parameters": {
-            "_seconds": {"type": "integer", "minimum": 1, "maximum": 25}
-          }
+            "_seconds": {"minimum": 1, "maximum": 25}
+          },
+          "progress": { "_seconds_left": "integer"},
+          "results": {}
         }
       }
     })");
 
     device->AddStateDefinitionsFromJson(R"({
-      "_sample": {"_ping_count": {"type": "integer"}}
+      "_sample": {"_ping_count":"integer"}
     })");
 
     device->SetStatePropertiesFromJson(R"({
@@ -69,9 +73,8 @@ class SampleHandler {
       return;
     LOG(INFO) << "received command: " << cmd->GetName();
 
-    const auto& params = cmd->GetParameters();
     std::string name;
-    if (!params.GetString("_name", &name)) {
+    if (!cmd->GetParameters()->GetString("_name", &name)) {
       weave::ErrorPtr error;
       weave::Error::AddTo(&error, FROM_HERE, "example",
                           "invalid_parameter_value", "Name is missing");
@@ -94,7 +97,7 @@ class SampleHandler {
     base::DictionaryValue state;
     state.SetInteger("_sample._ping_count", ++ping_count_);
     device_->SetStateProperties(state, nullptr);
-    LOG(INFO) << "New state: " << device_->GetState();
+    LOG(INFO) << "New state: " << *device_->GetState();
 
     base::DictionaryValue result;
     cmd->Complete(result, nullptr);
@@ -108,9 +111,8 @@ class SampleHandler {
       return;
     LOG(INFO) << "received command: " << cmd->GetName();
 
-    const auto& params = cmd->GetParameters();
     int seconds;
-    if (!params.GetInteger("_seconds", &seconds))
+    if (!cmd->GetParameters()->GetInteger("_seconds", &seconds))
       seconds = 10;
 
     LOG(INFO) << "starting countdown";
@@ -123,9 +125,8 @@ class SampleHandler {
       return;
 
     if (seconds > 0) {
-      const auto& params = cmd->GetParameters();
       std::string todo;
-      params.GetString("_todo", &todo);
+      cmd->GetParameters()->GetString("_todo", &todo);
       LOG(INFO) << "countdown tick: " << seconds << " seconds left";
 
       base::DictionaryValue progress;

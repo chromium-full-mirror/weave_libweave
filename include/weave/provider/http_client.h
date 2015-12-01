@@ -78,7 +78,7 @@ class HttpClient {
     virtual std::string GetContentType() const = 0;
     virtual std::string GetData() const = 0;
 
-    virtual ~Response() {}
+    virtual ~Response() = default;
   };
 
   using Headers = std::vector<std::pair<std::string, std::string>>;
@@ -92,7 +92,7 @@ class HttpClient {
                            const SendRequestCallback& callback) = 0;
 
  protected:
-  virtual ~HttpClient() {}
+  virtual ~HttpClient() = default;
 };
 
 }  // namespace provider

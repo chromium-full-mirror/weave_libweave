@@ -8,11 +8,10 @@
   'target_defaults': {
     'libraries': [
       '-lcrypto',
-      '-lexpat',
-      '-lgmock',
       '-lgtest',
+      '-lgmock',
+      '-lexpat',
       '-lpthread',
-      '-lrt',
     ],
   },
   'targets': [

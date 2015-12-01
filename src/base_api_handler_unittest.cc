@@ -10,9 +10,9 @@
 #include <weave/provider/test/mock_config_store.h>
 #include <weave/provider/test/mock_http_client.h>
 #include <weave/test/mock_device.h>
-#include <weave/test/unittest_utils.h>
 
 #include "src/commands/command_manager.h"
+#include "src/commands/unittest_utils.h"
 #include "src/config.h"
 #include "src/device_registration_info.h"
 #include "src/states/mock_state_change_queue_interface.h"
@@ -31,7 +31,7 @@ namespace weave {
 class BaseApiHandlerTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    EXPECT_CALL(mock_state_change_queue_, MockNotifyPropertiesUpdated(_, _))
+    EXPECT_CALL(mock_state_change_queue_, NotifyPropertiesUpdated(_, _))
         .WillRepeatedly(Return(true));
 
     command_manager_ = std::make_shared<CommandManager>();
@@ -84,8 +84,7 @@ class BaseApiHandlerTest : public ::testing::Test {
   }
 
   std::unique_ptr<base::DictionaryValue> GetBaseState() {
-    std::unique_ptr<base::DictionaryValue> state{
-        state_manager_->GetState().DeepCopy()};
+    auto state = state_manager_->GetState();
     std::set<std::string> result;
     for (base::DictionaryValue::Iterator it{*state}; !it.IsAtEnd();
          it.Advance()) {
@@ -108,38 +107,39 @@ class BaseApiHandlerTest : public ::testing::Test {
 
 TEST_F(BaseApiHandlerTest, Initialization) {
   auto command_defs =
-      command_manager_->GetCommandDictionary().GetCommandsAsJson(nullptr);
+      command_manager_->GetCommandDictionary().GetCommandsAsJson(
+          [](const CommandDefinition* def) { return true; }, true, nullptr);
 
   auto expected = R"({
     "base": {
       "updateBaseConfiguration": {
-        "minimalRole": "manager",
-        "parameters": {
-          "localAnonymousAccessMaxRole": {
-            "enum": [ "none", "viewer", "user" ],
-            "type": "string"
-          },
-          "localDiscoveryEnabled": {
-            "type": "boolean"
-          },
-          "localPairingEnabled": {
-            "type": "boolean"
-          }
-        }
+         "minimalRole": "manager",
+         "parameters": {
+            "localAnonymousAccessMaxRole": {
+               "enum": [ "none", "viewer", "user" ],
+               "type": "string"
+            },
+            "localDiscoveryEnabled": {
+               "type": "boolean"
+            },
+            "localPairingEnabled": {
+               "type": "boolean"
+            }
+         }
       },
       "updateDeviceInfo": {
-        "minimalRole": "manager",
-        "parameters": {
-          "description": {
-            "type": "string"
-          },
-          "location": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          }
-        }
+         "minimalRole": "manager",
+         "parameters": {
+            "description": {
+               "type": "string"
+            },
+            "location": {
+               "type": "string"
+            },
+            "name": {
+               "type": "string"
+            }
+         }
       }
     }
   })";

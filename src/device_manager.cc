@@ -134,7 +134,7 @@ bool DeviceManager::SetStateProperties(const base::DictionaryValue& dict,
   return state_manager_->SetProperties(dict, error);
 }
 
-const base::Value* DeviceManager::GetStateProperty(
+std::unique_ptr<base::Value> DeviceManager::GetStateProperty(
     const std::string& name) const {
   return state_manager_->GetProperty(name);
 }
@@ -145,7 +145,7 @@ bool DeviceManager::SetStateProperty(const std::string& name,
   return state_manager_->SetProperty(name, value, error);
 }
 
-const base::DictionaryValue& DeviceManager::GetState() const {
+std::unique_ptr<base::DictionaryValue> DeviceManager::GetState() const {
   return state_manager_->GetState();
 }
 

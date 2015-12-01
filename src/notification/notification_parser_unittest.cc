@@ -6,7 +6,8 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <weave/test/unittest_utils.h>
+
+#include "src/commands/unittest_utils.h"
 
 using testing::SaveArg;
 using testing::Invoke;
@@ -37,11 +38,11 @@ class NotificationParserTest : public ::testing::Test {
 
 TEST_F(NotificationParserTest, CommandCreated) {
   auto json = CreateDictionaryValue(R"({
-    "kind": "weave#notification",
+    "kind": "clouddevices#notification",
     "type": "COMMAND_CREATED",
     "deviceId": "device_id",
     "command": {
-      "kind": "weave#command",
+      "kind": "clouddevices#command",
       "deviceId": "device_id",
       "state": "queued",
       "name": "storage.list",
@@ -56,7 +57,7 @@ TEST_F(NotificationParserTest, CommandCreated) {
   })");
 
   const char expected_json[] = R"({
-      "kind": "weave#command",
+      "kind": "clouddevices#command",
       "deviceId": "device_id",
       "state": "queued",
       "name": "storage.list",
@@ -75,7 +76,7 @@ TEST_F(NotificationParserTest, CommandCreated) {
 
 TEST_F(NotificationParserTest, DeviceDeleted) {
   auto json = CreateDictionaryValue(R"({
-    "kind":"weave#notification",
+    "kind":"clouddevices#notification",
     "type":"DEVICE_DELETED",
     "deviceId":"some_device_id"
   })");
@@ -91,7 +92,7 @@ TEST_F(NotificationParserTest, Failure_NoKind) {
     "type": "COMMAND_CREATED",
     "deviceId": "device_id",
     "command": {
-      "kind": "weave#command",
+      "kind": "clouddevices#command",
       "deviceId": "device_id",
       "state": "queued",
       "name": "storage.list",
@@ -110,10 +111,10 @@ TEST_F(NotificationParserTest, Failure_NoKind) {
 
 TEST_F(NotificationParserTest, Failure_NoType) {
   auto json = CreateDictionaryValue(R"({
-    "kind": "weave#notification",
+    "kind": "clouddevices#notification",
     "deviceId": "device_id",
     "command": {
-      "kind": "weave#command",
+      "kind": "clouddevices#command",
       "deviceId": "device_id",
       "state": "queued",
       "name": "storage.list",
@@ -132,11 +133,11 @@ TEST_F(NotificationParserTest, Failure_NoType) {
 
 TEST_F(NotificationParserTest, IgnoredNotificationType) {
   auto json = CreateDictionaryValue(R"({
-    "kind": "weave#notification",
+    "kind": "clouddevices#notification",
     "type": "COMMAND_EXPIRED",
     "deviceId": "device_id",
     "command": {
-      "kind": "weave#command",
+      "kind": "clouddevices#command",
       "deviceId": "device_id",
       "state": "queued",
       "name": "storage.list",

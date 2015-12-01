@@ -29,7 +29,7 @@ class Wifi {
   virtual void StopAccessPoint() = 0;
 
  protected:
-  virtual ~Wifi() {}
+  virtual ~Wifi() = default;
 };
 
 }  // namespace provider

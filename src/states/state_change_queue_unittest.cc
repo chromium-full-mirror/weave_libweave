@@ -5,13 +5,11 @@
 #include "src/states/state_change_queue.h"
 
 #include <gtest/gtest.h>
-#include <weave/test/unittest_utils.h>
 
 #include "src/bind_lambda.h"
+#include "src/commands/unittest_utils.h"
 
 namespace weave {
-
-using test::CreateDictionaryValue;
 
 class StateChangeQueueTest : public ::testing::Test {
  public:
@@ -24,44 +22,48 @@ class StateChangeQueueTest : public ::testing::Test {
 
 TEST_F(StateChangeQueueTest, Empty) {
   EXPECT_TRUE(queue_->IsEmpty());
-  EXPECT_EQ(0u, queue_->GetLastStateChangeId());
+  EXPECT_EQ(0, queue_->GetLastStateChangeId());
   EXPECT_TRUE(queue_->GetAndClearRecordedStateChanges().empty());
 }
 
 TEST_F(StateChangeQueueTest, UpdateOne) {
-  auto timestamp = base::Time::Now();
-  ASSERT_TRUE(queue_->NotifyPropertiesUpdated(
-      timestamp, CreateDictionaryValue("{'prop': {'name': 23}}")));
+  StateChange change{base::Time::Now(),
+                     ValueMap{{"prop.name", test::make_int_prop_value(23)}}};
+  ASSERT_TRUE(queue_->NotifyPropertiesUpdated(change.timestamp,
+                                              change.changed_properties));
   EXPECT_FALSE(queue_->IsEmpty());
-  EXPECT_EQ(1u, queue_->GetLastStateChangeId());
+  EXPECT_EQ(1, queue_->GetLastStateChangeId());
   auto changes = queue_->GetAndClearRecordedStateChanges();
-  EXPECT_EQ(1u, queue_->GetLastStateChangeId());
-  ASSERT_EQ(1u, changes.size());
-  EXPECT_EQ(timestamp, changes.front().timestamp);
-  EXPECT_JSON_EQ("{'prop':{'name': 23}}", *changes.front().changed_properties);
+  EXPECT_EQ(1, queue_->GetLastStateChangeId());
+  ASSERT_EQ(1, changes.size());
+  EXPECT_EQ(change.timestamp, changes.front().timestamp);
+  EXPECT_EQ(change.changed_properties, changes.front().changed_properties);
   EXPECT_TRUE(queue_->IsEmpty());
   EXPECT_TRUE(queue_->GetAndClearRecordedStateChanges().empty());
 }
 
-TEST_F(StateChangeQueueTest, UpdateMany) {
-  auto timestamp1 = base::Time::Now();
-  const std::string state1 = "{'prop': {'name1': 23}}";
-  auto timestamp2 = timestamp1 + base::TimeDelta::FromSeconds(1);
-  const std::string state2 =
-      "{'prop': {'name1': 17, 'name2': 1.0, 'name3': false}}";
-  ASSERT_TRUE(queue_->NotifyPropertiesUpdated(
-      timestamp1, CreateDictionaryValue(state1)));
-  ASSERT_TRUE(queue_->NotifyPropertiesUpdated(
-      timestamp2, CreateDictionaryValue(state2)));
-
-  EXPECT_EQ(2u, queue_->GetLastStateChangeId());
+// TODO(vitalybuka): Fix flakiness.
+TEST_F(StateChangeQueueTest, DISABLED_UpdateMany) {
+  StateChange change1{base::Time::Now(),
+                      ValueMap{{"prop.name1", test::make_int_prop_value(23)}}};
+  ASSERT_TRUE(queue_->NotifyPropertiesUpdated(change1.timestamp,
+                                              change1.changed_properties));
+  StateChange change2{base::Time::Now(),
+                      ValueMap{
+                          {"prop.name1", test::make_int_prop_value(17)},
+                          {"prop.name2", test::make_double_prop_value(1.0)},
+                          {"prop.name3", test::make_bool_prop_value(false)},
+                      }};
+  ASSERT_TRUE(queue_->NotifyPropertiesUpdated(change2.timestamp,
+                                              change2.changed_properties));
+  EXPECT_EQ(2, queue_->GetLastStateChangeId());
   EXPECT_FALSE(queue_->IsEmpty());
   auto changes = queue_->GetAndClearRecordedStateChanges();
-  ASSERT_EQ(2u, changes.size());
-  EXPECT_EQ(timestamp1, changes[0].timestamp);
-  EXPECT_JSON_EQ(state1, *changes[0].changed_properties);
-  EXPECT_EQ(timestamp2, changes[1].timestamp);
-  EXPECT_JSON_EQ(state2, *changes[1].changed_properties);
+  ASSERT_EQ(2, changes.size());
+  EXPECT_EQ(change1.timestamp, changes[0].timestamp);
+  EXPECT_EQ(change1.changed_properties, changes[0].changed_properties);
+  EXPECT_EQ(change2.timestamp, changes[1].timestamp);
+  EXPECT_EQ(change2.changed_properties, changes[1].changed_properties);
   EXPECT_TRUE(queue_->IsEmpty());
   EXPECT_TRUE(queue_->GetAndClearRecordedStateChanges().empty());
 }
@@ -71,27 +73,33 @@ TEST_F(StateChangeQueueTest, GroupByTimestamp) {
   base::TimeDelta time_delta = base::TimeDelta::FromMinutes(1);
 
   ASSERT_TRUE(queue_->NotifyPropertiesUpdated(
-      timestamp, CreateDictionaryValue("{'prop': {'name1': 1}}")));
+      timestamp, ValueMap{{"prop.name1", test::make_int_prop_value(1)}}));
 
   ASSERT_TRUE(queue_->NotifyPropertiesUpdated(
-      timestamp, CreateDictionaryValue("{'prop': {'name2': 2}}")));
+      timestamp, ValueMap{{"prop.name2", test::make_int_prop_value(2)}}));
 
   ASSERT_TRUE(queue_->NotifyPropertiesUpdated(
-      timestamp, CreateDictionaryValue("{'prop': {'name1': 3}}")));
+      timestamp, ValueMap{{"prop.name1", test::make_int_prop_value(3)}}));
 
   ASSERT_TRUE(queue_->NotifyPropertiesUpdated(
-      timestamp + time_delta, CreateDictionaryValue("{'prop': {'name1': 4}}")));
+      timestamp + time_delta,
+      ValueMap{{"prop.name1", test::make_int_prop_value(4)}}));
 
   auto changes = queue_->GetAndClearRecordedStateChanges();
-  EXPECT_EQ(4u, queue_->GetLastStateChangeId());
-  ASSERT_EQ(2u, changes.size());
+  EXPECT_EQ(4, queue_->GetLastStateChangeId());
+  ASSERT_EQ(2, changes.size());
 
-  const std::string expected1 = "{'prop': {'name1': 3, 'name2': 2}}";
-  const std::string expected2 = "{'prop': {'name1': 4}}";
+  ValueMap expected1{
+      {"prop.name1", test::make_int_prop_value(3)},
+      {"prop.name2", test::make_int_prop_value(2)},
+  };
+  ValueMap expected2{
+      {"prop.name1", test::make_int_prop_value(4)},
+  };
   EXPECT_EQ(timestamp, changes[0].timestamp);
-  EXPECT_JSON_EQ(expected1, *changes[0].changed_properties);
+  EXPECT_EQ(expected1, changes[0].changed_properties);
   EXPECT_EQ(timestamp + time_delta, changes[1].timestamp);
-  EXPECT_JSON_EQ(expected2, *changes[1].changed_properties);
+  EXPECT_EQ(expected2, changes[1].changed_properties);
 }
 
 TEST_F(StateChangeQueueTest, MaxQueueSize) {
@@ -101,29 +109,43 @@ TEST_F(StateChangeQueueTest, MaxQueueSize) {
   base::TimeDelta time_delta2 = base::TimeDelta::FromMinutes(3);
 
   ASSERT_TRUE(queue_->NotifyPropertiesUpdated(
-      start_time, CreateDictionaryValue("{'prop': {'name1': 1, 'name2': 2}}")));
+      start_time, ValueMap{
+                      {"prop.name1", test::make_int_prop_value(1)},
+                      {"prop.name2", test::make_int_prop_value(2)},
+                  }));
 
   ASSERT_TRUE(queue_->NotifyPropertiesUpdated(
       start_time + time_delta1,
-      CreateDictionaryValue("{'prop': {'name1': 3, 'name3': 4}}")));
+      ValueMap{
+          {"prop.name1", test::make_int_prop_value(3)},
+          {"prop.name3", test::make_int_prop_value(4)},
+      }));
 
   ASSERT_TRUE(queue_->NotifyPropertiesUpdated(
       start_time + time_delta2,
-      CreateDictionaryValue("{'prop': {'name10': 10, 'name11': 11}}")));
+      ValueMap{
+          {"prop.name10", test::make_int_prop_value(10)},
+          {"prop.name11", test::make_int_prop_value(11)},
+      }));
 
-  EXPECT_EQ(3u, queue_->GetLastStateChangeId());
+  EXPECT_EQ(3, queue_->GetLastStateChangeId());
   auto changes = queue_->GetAndClearRecordedStateChanges();
-  ASSERT_EQ(2u, changes.size());
+  ASSERT_EQ(2, changes.size());
 
-  const std::string expected1 =
-      "{'prop': {'name1': 3, 'name2': 2, 'name3': 4}}";
+  ValueMap expected1{
+      {"prop.name1", test::make_int_prop_value(3)},
+      {"prop.name2", test::make_int_prop_value(2)},
+      {"prop.name3", test::make_int_prop_value(4)},
+  };
   EXPECT_EQ(start_time + time_delta1, changes[0].timestamp);
-  EXPECT_JSON_EQ(expected1, *changes[0].changed_properties);
+  EXPECT_EQ(expected1, changes[0].changed_properties);
 
-  const std::string expected2 =
-      "{'prop': {'name10': 10, 'name11': 11}}";
+  ValueMap expected2{
+      {"prop.name10", test::make_int_prop_value(10)},
+      {"prop.name11", test::make_int_prop_value(11)},
+  };
   EXPECT_EQ(start_time + time_delta2, changes[1].timestamp);
-  EXPECT_JSON_EQ(expected2, *changes[1].changed_properties);
+  EXPECT_EQ(expected2, changes[1].changed_properties);
 }
 
 TEST_F(StateChangeQueueTest, ImmediateStateChangeNotification) {
@@ -139,8 +161,10 @@ TEST_F(StateChangeQueueTest, ImmediateStateChangeNotification) {
 TEST_F(StateChangeQueueTest, DelayedStateChangeNotification) {
   // When queue is not empty, registering a new callback will not trigger it.
   ASSERT_TRUE(queue_->NotifyPropertiesUpdated(
-      base::Time::Now(),
-      CreateDictionaryValue("{'prop': {'name1': 1, 'name3': 2}}")));
+      base::Time::Now(), ValueMap{
+                             {"prop.name1", test::make_int_prop_value(1)},
+                             {"prop.name2", test::make_int_prop_value(2)},
+                         }));
 
   auto callback = [](StateChangeQueueInterface::UpdateID id) {
     FAIL() << "This should not be called";

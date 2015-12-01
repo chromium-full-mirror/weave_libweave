@@ -33,7 +33,7 @@ class XmppChannelInterface {
   virtual void SendMessage(const std::string& message) = 0;
 
  protected:
-  virtual ~XmppChannelInterface() {}
+  virtual ~XmppChannelInterface() = default;
 };
 
 class XmppChannel : public NotificationChannel,

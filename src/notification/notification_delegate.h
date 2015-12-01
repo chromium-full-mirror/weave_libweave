@@ -24,7 +24,7 @@ class NotificationDelegate {
   virtual void OnDeviceDeleted(const std::string& cloud_id) = 0;
 
  protected:
-  virtual ~NotificationDelegate() {}
+  virtual ~NotificationDelegate() = default;
 };
 
 }  // namespace weave

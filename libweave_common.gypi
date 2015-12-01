@@ -17,7 +17,7 @@
           '_DEBUG',
         ],
         'cflags': [
-          '-O0  ',
+          '-Og',
           '-g3',
         ],
       },
@@ -31,7 +31,6 @@
     ],
     'cflags!': ['-fPIE'],
     'cflags': [
-      '-fno-exceptions',
       '-fPIC',
       '-fvisibility=hidden',
       '-std=c++11',
@@ -47,10 +46,6 @@
       '-Wpacked',
       '-Wpointer-arith',
       '-Wwrite-strings',
-    ],
-    'libraries': [
-      # 'library_dirs' does not work as expected with make files
-      '-Lthird_party/lib',
     ],
     'library_dirs': ['third_party/lib']
   },
