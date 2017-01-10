@@ -272,6 +272,12 @@ DeviceRegistrationInfo::DeviceRegistrationInfo(
                  weak_factory_.GetWeakPtr()));
   state_manager_->AddChangedCallback(base::Bind(
       &DeviceRegistrationInfo::OnStateChanged, weak_factory_.GetWeakPtr()));
+
+  if (network_) {
+    network_->AddConnectionChangedCallback(base::Bind(
+        &DeviceRegistrationInfo::OnNetworkStateChanged,
+        weak_factory_.GetWeakPtr()));
+  }
 }
 
 DeviceRegistrationInfo::~DeviceRegistrationInfo() = default;
@@ -681,6 +687,13 @@ void DeviceRegistrationInfo::SendCloudRequest(
   ErrorPtr error;
   if (!VerifyRegistrationCredentials(&error))
     return data->callback.Run({}, std::move(error));
+
+  if (network_ &&
+      network_->GetConnectionState() != provider::Network::State::kOnline) {
+    LOG(INFO) << "Cloud request delayed because not online";
+    offline_cloud_requests_.push_back(data);
+    return;
+  }
 
   if (cloud_backoff_entry_->ShouldRejectRequest()) {
     VLOG(1) << "Cloud request delayed for "
@@ -1190,6 +1203,20 @@ void DeviceRegistrationInfo::OnStateChanged() {
 
   // TODO(vitalybuka): Integrate BackoffEntry.
   PublishStateUpdates();
+}
+
+void DeviceRegistrationInfo::OnNetworkStateChanged() {
+  if (network_ &&
+      network_->GetConnectionState() == provider::Network::State::kOnline &&
+      !offline_cloud_requests_.empty()) {
+    LOG(INFO) << "Sending queued cloud requests: "
+              << offline_cloud_requests_.size();
+    for (const auto &data : offline_cloud_requests_) {
+      SendCloudRequest(data);
+    }
+    offline_cloud_requests_.clear();
+    return;
+  }
 }
 
 void DeviceRegistrationInfo::OnConnected(const std::string& channel_name) {

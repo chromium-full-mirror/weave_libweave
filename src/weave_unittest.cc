@@ -307,6 +307,7 @@ TEST_F(WeaveTest, Mocks) {
 
 TEST_F(WeaveTest, StartMinimal) {
   InitConfigStore();
+  InitNetwork();
   device_ = weave::Device::Create(&config_store_, &task_runner_, &http_client_,
                                   &network_, nullptr, nullptr, &wifi_, nullptr);
 }

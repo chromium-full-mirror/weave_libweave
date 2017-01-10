@@ -257,6 +257,9 @@ class DeviceRegistrationInfo : public NotificationDelegate,
   void OnCommandDefsChanged();
   void OnStateChanged();
 
+  // Callback for network connectivity changes.
+  void OnNetworkStateChanged();
+
   // Overrides from NotificationDelegate.
   void OnConnected(const std::string& channel_name) override;
   void OnDisconnected() override;
@@ -342,6 +345,8 @@ class DeviceRegistrationInfo : public NotificationDelegate,
   GcdState gcd_state_{GcdState::kUnconfigured};
 
   std::vector<Device::GcdStateChangedCallback> gcd_state_changed_callbacks_;
+
+  std::vector<std::shared_ptr<const CloudRequestData>> offline_cloud_requests_;
 
   base::WeakPtrFactory<DeviceRegistrationInfo> weak_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(DeviceRegistrationInfo);
