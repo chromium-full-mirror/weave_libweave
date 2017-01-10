@@ -77,9 +77,9 @@ class DeviceManager final : public Device {
                    provider::Wifi* wifi,
                    provider::Bluetooth* bluetooth);
 
-  std::shared_ptr<CommandManager> command_manager_;
   std::unique_ptr<StateChangeQueue> state_change_queue_;
   std::shared_ptr<StateManager> state_manager_;
+  std::shared_ptr<CommandManager> command_manager_;
   std::unique_ptr<DeviceRegistrationInfo> device_info_;
   std::unique_ptr<BaseApiHandler> base_api_handler_;
   std::unique_ptr<privet::Manager> privet_;
