@@ -4,6 +4,7 @@
 
 #include "src/config.h"
 
+#include <algorithm>
 #include <set>
 
 #include <base/bind.h>
