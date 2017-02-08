@@ -4,6 +4,8 @@
 
 #include "src/commands/prop_constraints.h"
 
+#include <utility>
+
 #include <base/json/json_writer.h>
 #include <base/logging.h>
 
@@ -65,7 +67,7 @@ void Constraint::AddToJsonDict(base::DictionaryValue* dict,
   if (!overridden_only || HasOverriddenAttributes()) {
     auto value = ToJson();
     CHECK(value);
-    dict->SetWithoutPathExpansion(GetDictKey(), value.release());
+    dict->SetWithoutPathExpansion(GetDictKey(), std::move(value));
   }
 }
 

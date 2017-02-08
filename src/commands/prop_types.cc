@@ -98,7 +98,7 @@ std::unique_ptr<base::Value> PropType::ToJson(bool full_schema,
   if (default_.value && (full_schema || !default_.is_inherited)) {
     auto def_val = default_.value->ToJson();
     CHECK(def_val);
-    dict->Set(commands::attributes::kDefault, def_val.release());
+    dict->Set(commands::attributes::kDefault, std::move(def_val));
   }
 
   if (include_required)
@@ -472,7 +472,7 @@ std::unique_ptr<base::Value> ObjectPropType::ToJson(bool full_schema,
     CHECK(object_schema);
 
     dict->SetWithoutPathExpansion(commands::attributes::kObject_Properties,
-                                  object_schema.release());
+                                  std::move(object_schema));
     dict->SetBooleanWithoutPathExpansion(
         commands::attributes::kObject_AdditionalProperties,
         object_schema_.value->GetExtraPropertiesAllowed());
@@ -482,7 +482,7 @@ std::unique_ptr<base::Value> ObjectPropType::ToJson(bool full_schema,
         required->AppendString(pair.first);
     }
     if (required->GetSize() > 0) {
-      dict->Set(commands::attributes::kObject_Required, required.release());
+      dict->Set(commands::attributes::kObject_Required, std::move(required));
     }
   }
   return value;
@@ -598,7 +598,8 @@ std::unique_ptr<base::Value> ArrayPropType::ToJson(bool full_schema,
     CHECK(value->GetAsDictionary(&dict)) << "Expecting a JSON object";
     auto type = item_type_.value->ToJson(full_schema, false);
     CHECK(type);
-    dict->SetWithoutPathExpansion(commands::attributes::kItems, type.release());
+    dict->SetWithoutPathExpansion(commands::attributes::kItems,
+                                  std::move(type));
   }
   return value;
 }

@@ -4,6 +4,8 @@
 
 #include "src/states/state_package.h"
 
+#include <utility>
+
 #include <base/logging.h>
 #include <base/values.h>
 
@@ -57,7 +59,7 @@ std::unique_ptr<base::DictionaryValue> StatePackage::GetValuesAsJson() const {
   for (const auto& pair : values_) {
     auto value = pair.second->ToJson();
     CHECK(value);
-    dict->SetWithoutPathExpansion(pair.first, value.release());
+    dict->SetWithoutPathExpansion(pair.first, std::move(value));
   }
   return dict;
 }

@@ -11,6 +11,7 @@
 #include <memory>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include <base/logging.h>
@@ -69,7 +70,7 @@ std::unique_ptr<base::ListValue> TypedValueToJson(
   for (const auto& v : values) {
     auto json = TypedValueToJson(v);
     CHECK(json);
-    list->Append(json.release());
+    list->Append(std::move(json));
   }
   return list;
 }

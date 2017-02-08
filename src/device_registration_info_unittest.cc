@@ -433,10 +433,10 @@ TEST_F(DeviceRegistrationInfoTest, RegisterDevice) {
         json_resp.SetString("oauthClientId", test_data::kClientId);
         base::DictionaryValue* device_draft = nullptr;
         EXPECT_TRUE(json->GetDictionary("deviceDraft", &device_draft));
-        device_draft = device_draft->DeepCopy();
-        device_draft->SetString("id", test_data::kDeviceId);
-        device_draft->SetString("kind", "weave#device");
-        json_resp.Set("deviceDraft", device_draft);
+        auto device_draft_copy = device_draft->CreateDeepCopy();
+        device_draft_copy->SetString("id", test_data::kDeviceId);
+        device_draft_copy->SetString("kind", "weave#device");
+        json_resp.Set("deviceDraft", std::move(device_draft_copy));
 
         callback.Run(ReplyWithJson(200, json_resp), nullptr);
       })));

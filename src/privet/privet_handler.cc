@@ -12,6 +12,7 @@
 
 #include <base/bind.h>
 #include <base/location.h>
+#include <base/memory/ptr_util.h>
 #include <base/strings/stringprintf.h>
 #include <base/values.h>
 #include <weave/enum_to_string.h>
@@ -173,9 +174,9 @@ std::unique_ptr<base::DictionaryValue> ErrorToJson(const Error& error) {
                                        it->GetLocation().file_name.c_str(),
                                        it->GetLocation().line_number, nullptr};
     inner->SetString(kErrorDebugInfoKey, location.ToString());
-    errors->Append(inner.release());
+    errors->Append(std::move(inner));
   }
-  output->Set(kErrorDebugInfoKey, errors.release());
+  output->Set(kErrorDebugInfoKey, std::move(errors));
   return output;
 }
 
@@ -186,7 +187,7 @@ void SetStateProperties(const T& state, base::DictionaryValue* parent) {
     return;
   }
   parent->SetString(kStatusKey, kStatusErrorValue);
-  parent->Set(kErrorKey, ErrorToJson(*state.error()).release());
+  parent->Set(kErrorKey, ErrorToJson(*state.error()));
 }
 
 void ReturnError(const Error& error,
@@ -199,7 +200,7 @@ void ReturnError(const Error& error,
     }
   }
   std::unique_ptr<base::DictionaryValue> output{new base::DictionaryValue};
-  output->Set(kErrorKey, ErrorToJson(error).release());
+  output->Set(kErrorKey, ErrorToJson(error));
   callback.Run(code, *output);
 }
 
@@ -258,7 +259,7 @@ std::unique_ptr<base::DictionaryValue> CreateInfoAuthSection(
   std::unique_ptr<base::ListValue> pairing_types(new base::ListValue());
   for (PairingType type : security.GetPairingTypes())
     pairing_types->AppendString(EnumToString(type));
-  auth->Set(kPairingKey, pairing_types.release());
+  auth->Set(kPairingKey, std::move(pairing_types));
 
   std::unique_ptr<base::ListValue> auth_types(new base::ListValue());
   auth_types->AppendString(kAuthTypeAnonymousValue);
@@ -268,12 +269,12 @@ std::unique_ptr<base::DictionaryValue> CreateInfoAuthSection(
   // if (cloud.GetConnectionState().IsStatusEqual(ConnectionState::kOnline)) {
   //   auth_types->AppendString(kAuthTypeCloudValue);
   // }
-  auth->Set(kAuthModeKey, auth_types.release());
+  auth->Set(kAuthModeKey, std::move(auth_types));
 
   std::unique_ptr<base::ListValue> crypto_types(new base::ListValue());
   for (CryptoType type : security.GetCryptoTypes())
     crypto_types->AppendString(EnumToString(type));
-  auth->Set(kCryptoKey, crypto_types.release());
+  auth->Set(kCryptoKey, std::move(crypto_types));
 
   return auth;
 }
@@ -285,7 +286,7 @@ std::unique_ptr<base::DictionaryValue> CreateWifiSection(
   std::unique_ptr<base::ListValue> capabilities(new base::ListValue());
   for (WifiType type : wifi.GetTypes())
     capabilities->AppendString(EnumToString(type));
-  result->Set(kInfoWifiCapabilitiesKey, capabilities.release());
+  result->Set(kInfoWifiCapabilitiesKey, std::move(capabilities));
 
   result->SetString(kInfoWifiSsidKey, wifi.GetCurrentlyConnectedSsid());
 
@@ -503,23 +504,21 @@ void PrivetHandler::HandleInfo(const base::DictionaryValue&,
     output.SetString(kLocationKey, location);
 
   output.SetString(kInfoModelIdKey, model_id);
-  output.Set(kInfoModelManifestKey, CreateManifestSection(*cloud_).release());
+  output.Set(kInfoModelManifestKey, CreateManifestSection(*cloud_));
   output.Set(
       kInfoServicesKey,
-      ToValue(std::vector<std::string>{GetDeviceUiKind(cloud_->GetModelId())})
-          .release());
+      ToValue(std::vector<std::string>{GetDeviceUiKind(cloud_->GetModelId())}));
 
   output.Set(
       kInfoAuthenticationKey,
-      CreateInfoAuthSection(*security_, GetAnonymousMaxScope(*cloud_, wifi_))
-          .release());
+      CreateInfoAuthSection(*security_, GetAnonymousMaxScope(*cloud_, wifi_)));
 
-  output.Set(kInfoEndpointsKey, CreateEndpointsSection(*device_).release());
+  output.Set(kInfoEndpointsKey, CreateEndpointsSection(*device_));
 
   if (wifi_)
-    output.Set(kWifiKey, CreateWifiSection(*wifi_).release());
+    output.Set(kWifiKey, CreateWifiSection(*wifi_));
 
-  output.Set(kGcdKey, CreateGcdSection(*cloud_).release());
+  output.Set(kGcdKey, CreateGcdSection(*cloud_));
 
   output.SetInteger(kInfoUptimeKey, device_->GetUptime().InSeconds());
 
@@ -737,21 +736,23 @@ void PrivetHandler::ReplyWithSetupStatus(
 
   const SetupState& state = cloud_->GetSetupState();
   if (!state.IsStatusEqual(SetupState::kNone)) {
-    base::DictionaryValue* gcd = new base::DictionaryValue;
-    output.Set(kGcdKey, gcd);
-    SetStateProperties(state, gcd);
+    auto gcd = base::MakeUnique<base::DictionaryValue>();
+    SetStateProperties(state, gcd.get());
     if (state.IsStatusEqual(SetupState::kSuccess))
       gcd->SetString(kInfoIdKey, cloud_->GetCloudId());
+
+    output.Set(kGcdKey, std::move(gcd));
   }
 
   if (wifi_) {
     const SetupState& state = wifi_->GetSetupState();
     if (!state.IsStatusEqual(SetupState::kNone)) {
-      base::DictionaryValue* wifi = new base::DictionaryValue;
-      output.Set(kWifiKey, wifi);
-      SetStateProperties(state, wifi);
+      auto wifi = base::MakeUnique<base::DictionaryValue>();
+      SetStateProperties(state, wifi.get());
       if (state.IsStatusEqual(SetupState::kSuccess))
         wifi->SetString(kInfoWifiSsidKey, wifi_->GetCurrentlyConnectedSsid());
+
+      output.Set(kWifiKey, std::move(wifi));
     }
   }
 
@@ -762,8 +763,7 @@ void PrivetHandler::HandleState(const base::DictionaryValue& input,
                                 const UserInfo& user_info,
                                 const RequestCallback& callback) {
   base::DictionaryValue output;
-  base::DictionaryValue* defs = cloud_->GetState().DeepCopy();
-  output.Set(kStateKey, defs);
+  output.Set(kStateKey, cloud_->GetState().CreateDeepCopy());
   output.SetString(kFingerprintKey, std::to_string(state_fingerprint_));
 
   callback.Run(http::kOk, output);
@@ -773,8 +773,7 @@ void PrivetHandler::HandleCommandDefs(const base::DictionaryValue& input,
                                       const UserInfo& user_info,
                                       const RequestCallback& callback) {
   base::DictionaryValue output;
-  base::DictionaryValue* defs = cloud_->GetCommandDef().DeepCopy();
-  output.Set(kCommandsKey, defs);
+  output.Set(kCommandsKey, cloud_->GetCommandDef().CreateDeepCopy());
   output.SetString(kFingerprintKey, std::to_string(command_defs_fingerprint_));
 
   callback.Run(http::kOk, output);

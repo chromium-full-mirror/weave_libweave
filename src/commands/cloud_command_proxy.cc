@@ -4,6 +4,8 @@
 
 #include "src/commands/cloud_command_proxy.h"
 
+#include <utility>
+
 #include <base/bind.h>
 #include <weave/enum_to_string.h>
 #include <weave/provider/task_runner.h>
@@ -37,15 +39,15 @@ void CloudCommandProxy::OnErrorChanged() {
   std::unique_ptr<base::DictionaryValue> patch{new base::DictionaryValue};
   patch->Set(commands::attributes::kCommand_Error,
              command_instance_->GetError()
-                 ? ErrorInfoToJson(*command_instance_->GetError()).release()
-                 : base::Value::CreateNullValue().release());
+                 ? ErrorInfoToJson(*command_instance_->GetError())
+                 : base::Value::CreateNullValue());
   QueueCommandUpdate(std::move(patch));
 }
 
 void CloudCommandProxy::OnResultsChanged() {
   std::unique_ptr<base::DictionaryValue> patch{new base::DictionaryValue};
   patch->Set(commands::attributes::kCommand_Results,
-             command_instance_->GetResults().release());
+             command_instance_->GetResults());
   QueueCommandUpdate(std::move(patch));
 }
 
@@ -59,7 +61,7 @@ void CloudCommandProxy::OnStateChanged() {
 void CloudCommandProxy::OnProgressChanged() {
   std::unique_ptr<base::DictionaryValue> patch{new base::DictionaryValue};
   patch->Set(commands::attributes::kCommand_Progress,
-             command_instance_->GetProgress().release());
+             command_instance_->GetProgress());
   QueueCommandUpdate(std::move(patch));
 }
 

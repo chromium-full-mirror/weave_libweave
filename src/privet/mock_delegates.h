@@ -9,6 +9,7 @@
 #include <string>
 #include <utility>
 
+#include <base/memory/ptr_util.h>
 #include <base/values.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -184,7 +185,7 @@ class MockCloudDelegate : public CloudDelegate {
         .WillRepeatedly(ReturnRef(connection_state_));
     EXPECT_CALL(*this, GetSetupState()).WillRepeatedly(ReturnRef(setup_state_));
     EXPECT_CALL(*this, GetCloudId()).WillRepeatedly(Return("TestCloudId"));
-    test_dict_.Set("test", new base::DictionaryValue);
+    test_dict_.Set("test", base::MakeUnique<base::DictionaryValue>());
     EXPECT_CALL(*this, GetCommandDef()).WillRepeatedly(ReturnRef(test_dict_));
     EXPECT_CALL(*this, GetState()).WillRepeatedly(ReturnRef(test_dict_));
   }

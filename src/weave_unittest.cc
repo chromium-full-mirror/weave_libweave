@@ -4,6 +4,8 @@
 
 #include <weave/device.h>
 
+#include <utility>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <weave/provider/test/fake_task_runner.h>
@@ -347,14 +349,14 @@ TEST_F(WeaveBasicTest, Register) {
 
   auto draft = CreateDictionaryValue(kDeviceResource);
   auto response = CreateDictionaryValue(kRegistrationResponse);
-  response->Set("deviceDraft", draft->DeepCopy());
+  response->Set("deviceDraft", draft->CreateDeepCopy());
   ExpectRequest(HttpClient::Method::kPatch,
                 "https://www.googleapis.com/weave/v1/registrationTickets/"
                 "TICKET_ID?key=TEST_API_KEY",
                 ValueToString(*response));
 
   response = CreateDictionaryValue(kRegistrationFinalResponse);
-  response->Set("deviceDraft", draft->DeepCopy());
+  response->Set("deviceDraft", draft->CreateDeepCopy());
   ExpectRequest(HttpClient::Method::kPost,
                 "https://www.googleapis.com/weave/v1/registrationTickets/"
                 "TICKET_ID/finalize?key=TEST_API_KEY",

@@ -269,15 +269,13 @@ std::unique_ptr<base::DictionaryValue> CommandInstance::ToJson() const {
   json->SetString(commands::attributes::kCommand_Id, id_);
   json->SetString(commands::attributes::kCommand_Name, name_);
   json->Set(commands::attributes::kCommand_Parameters,
-            TypedValueToJson(parameters_).release());
+            TypedValueToJson(parameters_));
   json->Set(commands::attributes::kCommand_Progress,
-            TypedValueToJson(progress_).release());
-  json->Set(commands::attributes::kCommand_Results,
-            TypedValueToJson(results_).release());
+            TypedValueToJson(progress_));
+  json->Set(commands::attributes::kCommand_Results, TypedValueToJson(results_));
   json->SetString(commands::attributes::kCommand_State, EnumToString(state_));
   if (error_) {
-    json->Set(commands::attributes::kCommand_Error,
-              ErrorInfoToJson(*error_).release());
+    json->Set(commands::attributes::kCommand_Error, ErrorInfoToJson(*error_));
   }
 
   return json;

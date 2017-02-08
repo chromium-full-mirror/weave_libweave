@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <utility>
 
 #include <base/logging.h>
 #include <base/values.h>
@@ -143,7 +144,7 @@ std::unique_ptr<PropType> PropFromJsonArray(const base::Value& value,
   }
   base::DictionaryValue array_object;
   array_object.SetWithoutPathExpansion(commands::attributes::kOneOf_Enum,
-                                       list->DeepCopy());
+                                       list->CreateDeepCopy());
   prop = CreatePropType(type_name, error);
   if (prop && !prop->FromJson(&array_object, base_schema, error))
     prop.reset();
@@ -319,7 +320,7 @@ std::unique_ptr<base::DictionaryValue> ObjectSchema::ToJson(
   for (const auto& pair : properties_) {
     auto prop_def = pair.second->ToJson(full_schema, in_command_def);
     CHECK(prop_def);
-    value->SetWithoutPathExpansion(pair.first, prop_def.release());
+    value->SetWithoutPathExpansion(pair.first, std::move(prop_def));
   }
   return value;
 }

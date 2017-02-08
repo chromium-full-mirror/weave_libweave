@@ -512,9 +512,9 @@ DeviceRegistrationInfo::BuildDeviceResource(ErrorPtr* error) {
   } else {
     channel->SetString("supportedType", "pull");
   }
-  resource->Set("channel", channel.release());
-  resource->Set("commandDefs", commands.release());
-  resource->Set("state", state.release());
+  resource->Set("channel", std::move(channel));
+  resource->Set("commandDefs", std::move(commands));
+  resource->Set("state", std::move(state));
 
   return resource;
 }
@@ -544,7 +544,7 @@ void DeviceRegistrationInfo::RegisterDevice(const std::string& ticket_id,
   base::DictionaryValue req_json;
   req_json.SetString("id", ticket_id);
   req_json.SetString("oauthClientId", GetSettings().client_id);
-  req_json.Set("deviceDraft", device_draft.release());
+  req_json.Set("deviceDraft", std::move(device_draft));
 
   auto url = GetServiceURL("registrationTickets/" + ticket_id,
                            {{"key", GetSettings().api_key}});
@@ -879,7 +879,7 @@ void DeviceRegistrationInfo::NotifyCommandAborted(const std::string& command_id,
                           EnumToString(Command::State::kAborted));
   if (error) {
     command_patch.Set(commands::attributes::kCommand_Error,
-                      ErrorInfoToJson(*error).release());
+                      ErrorInfoToJson(*error));
   }
   UpdateCommand(command_id, command_patch, base::Bind(&IgnoreCloudError));
 }
@@ -1063,7 +1063,8 @@ void DeviceRegistrationInfo::ProcessInitialCommandList(
         continue;
       }
 
-      std::unique_ptr<base::DictionaryValue> cmd_copy{command_dict->DeepCopy()};
+      std::unique_ptr<base::DictionaryValue> cmd_copy =
+          command_dict->CreateDeepCopy();
       cmd_copy->SetString("state", "aborted");
       // TODO(wiley) We could consider handling this error case more gracefully.
       DoCloudRequest(HttpClient::Method::kPut,
@@ -1147,17 +1148,17 @@ void DeviceRegistrationInfo::PublishStateUpdates() {
       // "package.property_name", so must use DictionaryValue::Set() instead of
       // DictionaryValue::SetWithoutPathExpansion to recreate the JSON
       // property tree properly.
-      changes->Set(pair.first, value.release());
+      changes->Set(pair.first, std::move(value));
     }
-    patch->Set("patch", changes.release());
+    patch->Set("patch", std::move(changes));
 
-    patches->Append(patch.release());
+    patches->Append(std::move(patch));
   }
 
   base::DictionaryValue body;
   body.SetString("requestTimeMs",
                  std::to_string(base::Time::Now().ToJavaTime()));
-  body.Set("patches", patches.release());
+  body.Set("patches", std::move(patches));
 
   device_state_update_pending_ = true;
   DoCloudRequest(HttpClient::Method::kPost, GetDeviceURL("patchState"), &body,

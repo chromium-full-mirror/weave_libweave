@@ -4,6 +4,9 @@
 
 #include "src/commands/command_dictionary.h"
 
+#include <utility>
+
+#include <base/memory/ptr_util.h>
 #include <base/values.h>
 #include <weave/enum_to_string.h>
 
@@ -210,15 +213,16 @@ std::unique_ptr<base::DictionaryValue> CommandDictionary::GetCommandsAsJson(
     if (!dict->GetDictionaryWithoutPathExpansion(package_name, &package)) {
       // If this is the first time we encounter this package, create a JSON
       // object for it.
-      package = new base::DictionaryValue;
-      dict->SetWithoutPathExpansion(package_name, package);
+      dict->SetWithoutPathExpansion(package_name,
+                                    base::MakeUnique<base::DictionaryValue>());
+      DCHECK(dict->GetDictionaryWithoutPathExpansion(package_name, &package));
     }
-    base::DictionaryValue* command_def = new base::DictionaryValue;
+    auto command_def = base::MakeUnique<base::DictionaryValue>();
     command_def->Set(commands::attributes::kCommand_Parameters,
-                     parameters.release());
+                     std::move(parameters));
     command_def->SetString(commands::attributes::kCommand_Role,
                            EnumToString(pair.second->GetMinimalRole()));
-    package->SetWithoutPathExpansion(command_name, command_def);
+    package->SetWithoutPathExpansion(command_name, std::move(command_def));
   }
   return dict;
 }

@@ -80,7 +80,7 @@ std::unique_ptr<base::DictionaryValue> TypedValueToJson(const ValueMap& value) {
   for (const auto& pair : value) {
     auto prop_value = pair.second->ToJson();
     CHECK(prop_value);
-    dict->SetWithoutPathExpansion(pair.first, prop_value.release());
+    dict->SetWithoutPathExpansion(pair.first, std::move(prop_value));
   }
   return dict;
 }
@@ -90,7 +90,7 @@ std::unique_ptr<base::ListValue> TypedValueToJson(const ValueVector& value) {
   for (const auto& item : value) {
     auto json = item->ToJson();
     CHECK(json);
-    list->Append(json.release());
+    list->Append(std::move(json));
   }
   return list;
 }

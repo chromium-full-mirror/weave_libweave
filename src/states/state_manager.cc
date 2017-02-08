@@ -32,7 +32,7 @@ std::unique_ptr<base::DictionaryValue> StateManager::GetState() const {
   for (const auto& pair : packages_) {
     auto pkg_value = pair.second->GetValuesAsJson();
     CHECK(pkg_value);
-    dict->SetWithoutPathExpansion(pair.first, pkg_value.release());
+    dict->SetWithoutPathExpansion(pair.first, std::move(pkg_value));
   }
   return dict;
 }
