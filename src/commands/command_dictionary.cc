@@ -215,7 +215,9 @@ std::unique_ptr<base::DictionaryValue> CommandDictionary::GetCommandsAsJson(
       // object for it.
       dict->SetWithoutPathExpansion(package_name,
                                     base::MakeUnique<base::DictionaryValue>());
-      DCHECK(dict->GetDictionaryWithoutPathExpansion(package_name, &package));
+      bool got_package =
+          dict->GetDictionaryWithoutPathExpansion(package_name, &package);
+      DCHECK(got_package);
     }
     auto command_def = base::MakeUnique<base::DictionaryValue>();
     command_def->Set(commands::attributes::kCommand_Parameters,
