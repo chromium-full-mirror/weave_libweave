@@ -12,7 +12,6 @@
 #include <base/json/json_reader.h>
 #include <base/json/json_writer.h>
 #include <base/logging.h>
-#include <base/memory/scoped_ptr.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/values.h>
 #include <weave/enum_to_string.h>
@@ -57,7 +56,7 @@ void MigrateFromV0(base::DictionaryValue* dict) {
   std::string cloud_id;
   if (dict->GetString(config_keys::kCloudId, &cloud_id) && !cloud_id.empty())
     return;
-  scoped_ptr<base::Value> tmp;
+  std::unique_ptr<base::Value> tmp;
   if (dict->Remove(config_keys::kDeviceId, &tmp))
     dict->Set(config_keys::kCloudId, std::move(tmp));
 }

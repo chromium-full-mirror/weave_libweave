@@ -225,7 +225,7 @@ std::unique_ptr<base::DictionaryValue> ParseJsonResponse(
         "Response is not a valid JSON object: '%s'", json.c_str());
     return std::unique_ptr<base::DictionaryValue>();
   } else {
-    // |value| is now owned by |dict_value|, so release the scoped_ptr now.
+    // |value| is now owned by |dict_value|, so release the unique_ptr now.
     base::IgnoreResult(value.release());
   }
   return std::unique_ptr<base::DictionaryValue>(dict_value);
