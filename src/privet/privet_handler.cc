@@ -381,7 +381,7 @@ PrivetHandler::~PrivetHandler() {
 
 void PrivetHandler::OnCommandDefsChanged() {
   ++command_defs_fingerprint_;
-  auto pred = [this](const UpdateRequestParameters& params) {
+  auto pred = [](const UpdateRequestParameters& params) {
     return params.command_defs_fingerprint < 0;
   };
   auto last =
@@ -393,7 +393,7 @@ void PrivetHandler::OnCommandDefsChanged() {
 
 void PrivetHandler::OnStateChanged() {
   ++state_fingerprint_;
-  auto pred = [this](const UpdateRequestParameters& params) {
+  auto pred = [](const UpdateRequestParameters& params) {
     return params.state_fingerprint < 0;
   };
   auto last =
