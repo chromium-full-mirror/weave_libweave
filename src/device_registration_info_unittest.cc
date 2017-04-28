@@ -339,8 +339,8 @@ TEST_F(DeviceRegistrationInfoTest, GetDeviceInfo) {
           })));
 
   bool succeeded = false;
-  auto callback = [&succeeded, this](const base::DictionaryValue& info,
-                                     ErrorPtr error) {
+  auto callback = [&succeeded](const base::DictionaryValue& info,
+                               ErrorPtr error) {
     EXPECT_FALSE(error);
     std::string id;
     EXPECT_TRUE(info.GetString("id", &id));
