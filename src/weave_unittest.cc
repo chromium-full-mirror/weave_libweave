@@ -474,9 +474,9 @@ TEST_F(WeaveWiFiSetupTest, OfflineLongTimeWithNoSsid) {
   NotifyNetworkChanged(provider::Network::State::kOnline,
                        base::TimeDelta::FromHours(15));
 
+  auto time_stamp = task_runner_.GetClock()->Now();
   {
     InSequence s;
-    auto time_stamp = task_runner_.GetClock()->Now();
 
     EXPECT_CALL(wifi_, StartAccessPoint(MatchesRegex("TEST_NAME.*prv")))
         .WillOnce(InvokeWithoutArgs([this, &time_stamp]() {
@@ -505,9 +505,9 @@ TEST_F(WeaveWiFiSetupTest, OfflineLongTimeWithSsid) {
   NotifyNetworkChanged(provider::Network::State::kOnline,
                        base::TimeDelta::FromHours(15));
 
+  auto time_stamp = task_runner_.GetClock()->Now();
   {
     InSequence s;
-    auto time_stamp = task_runner_.GetClock()->Now();
     for (size_t i = 0; i < 10; ++i) {
       EXPECT_CALL(wifi_, StartAccessPoint(MatchesRegex("TEST_NAME.*prv")))
           .WillOnce(InvokeWithoutArgs([this, &time_stamp]() {
