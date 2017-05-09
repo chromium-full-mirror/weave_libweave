@@ -354,10 +354,6 @@ DeviceRegistrationInfo::ParseOAuthResponse(const HttpClient::Response& response,
     if (!resp->GetString("error", &error_code)) {
       error_code = "unexpected_response";
     }
-    if (error_code == "invalid_grant") {
-      LOG(INFO) << "The device's registration has been revoked.";
-      SetGcdState(GcdState::kInvalidCredentials);
-    }
     // I have never actually seen an error_description returned.
     if (!resp->GetString("error_description", &error_message)) {
       error_message = "Unexpected OAuth error";
@@ -778,13 +774,13 @@ void DeviceRegistrationInfo::OnAccessTokenRefreshed(
 
 void DeviceRegistrationInfo::CheckAccessTokenError(ErrorPtr error) {
   if (error && error->HasError(kErrorDomainOAuth2, "invalid_grant"))
-    RemoveCredentials();
+    SetGcdState(GcdState::kInvalidCredentials);
 }
 
 void DeviceRegistrationInfo::ConnectToCloud(ErrorPtr error) {
   if (error) {
     if (error->HasError(kErrorDomainOAuth2, "invalid_grant"))
-      RemoveCredentials();
+      SetGcdState(GcdState::kInvalidCredentials);
     return;
   }
 

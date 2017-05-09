@@ -315,7 +315,6 @@ TEST_F(DeviceRegistrationInfoTest, CheckDeregistration) {
   ErrorPtr error;
   EXPECT_FALSE(RefreshAccessToken(&error));
   EXPECT_TRUE(error->HasError(kErrorDomainOAuth2, "invalid_grant"));
-  EXPECT_EQ(GcdState::kInvalidCredentials, GetGcdState());
   EXPECT_EQ(test_data::kDeviceId, dev_reg_->GetSettings().cloud_id);
 }
 
