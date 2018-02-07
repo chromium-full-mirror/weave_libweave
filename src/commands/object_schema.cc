@@ -87,22 +87,22 @@ std::string DetectArrayType(const base::ListValue* list,
     const base::Value* first_element = nullptr;
     if (list->Get(0, &first_element)) {
       switch (first_element->GetType()) {
-        case base::Value::TYPE_BOOLEAN:
+        case base::Value::Type::BOOLEAN:
           type_name = PropType::GetTypeStringFromType(ValueType::Boolean);
           break;
-        case base::Value::TYPE_INTEGER:
+        case base::Value::Type::INTEGER:
           type_name = PropType::GetTypeStringFromType(ValueType::Int);
           break;
-        case base::Value::TYPE_DOUBLE:
+        case base::Value::Type::DOUBLE:
           type_name = PropType::GetTypeStringFromType(ValueType::Double);
           break;
-        case base::Value::TYPE_STRING:
+        case base::Value::Type::STRING:
           type_name = PropType::GetTypeStringFromType(ValueType::String);
           break;
-        case base::Value::TYPE_DICTIONARY:
+        case base::Value::Type::DICTIONARY:
           type_name = PropType::GetTypeStringFromType(ValueType::Object);
           break;
-        case base::Value::TYPE_LIST: {
+        case base::Value::Type::LIST: {
           if (allow_arrays) {
             type_name = PropType::GetTypeStringFromType(ValueType::Array);
             const base::ListValue* first_element_list = nullptr;
@@ -178,10 +178,10 @@ std::string DetectObjectType(const base::DictionaryValue* dict,
   // it's a Double.
   const base::Value* value = nullptr;
   if (dict->Get(commands::attributes::kNumeric_Min, &value) &&
-      value->IsType(base::Value::TYPE_DOUBLE))
+      value->IsType(base::Value::Type::DOUBLE))
     return PropType::GetTypeStringFromType(ValueType::Double);
   if (dict->Get(commands::attributes::kNumeric_Max, &value) &&
-      value->IsType(base::Value::TYPE_DOUBLE))
+      value->IsType(base::Value::Type::DOUBLE))
     return PropType::GetTypeStringFromType(ValueType::Double);
 
   // If we have "minimum" or "maximum", it's an Integer.
@@ -209,15 +209,15 @@ std::string DetectObjectType(const base::DictionaryValue* dict,
 
   // If we have "default", try to use it for type detection.
   if (dict->Get(commands::attributes::kDefault, &value)) {
-    if (value->IsType(base::Value::TYPE_DOUBLE))
+    if (value->IsType(base::Value::Type::DOUBLE))
       return PropType::GetTypeStringFromType(ValueType::Double);
-    if (value->IsType(base::Value::TYPE_INTEGER))
+    if (value->IsType(base::Value::Type::INTEGER))
       return PropType::GetTypeStringFromType(ValueType::Int);
-    if (value->IsType(base::Value::TYPE_BOOLEAN))
+    if (value->IsType(base::Value::Type::BOOLEAN))
       return PropType::GetTypeStringFromType(ValueType::Boolean);
-    if (value->IsType(base::Value::TYPE_STRING))
+    if (value->IsType(base::Value::Type::STRING))
       return PropType::GetTypeStringFromType(ValueType::String);
-    if (value->IsType(base::Value::TYPE_LIST)) {
+    if (value->IsType(base::Value::Type::LIST)) {
       CHECK(value->GetAsList(&list)) << "List value expected";
       std::string child_type = DetectArrayType(list, base_schema, false);
       if (!child_type.empty()) {
@@ -263,14 +263,14 @@ std::unique_ptr<PropType> PropFromJsonObject(const base::Value& value,
 }
 
 const EnumToStringMap<base::Value::Type>::Map kMap[] = {
-    {base::Value::TYPE_NULL, "Null"},
-    {base::Value::TYPE_BOOLEAN, "Boolean"},
-    {base::Value::TYPE_INTEGER, "Integer"},
-    {base::Value::TYPE_DOUBLE, "Double"},
-    {base::Value::TYPE_STRING, "String"},
-    {base::Value::TYPE_BINARY, "Binary"},
-    {base::Value::TYPE_DICTIONARY, "Object"},
-    {base::Value::TYPE_LIST, "Array"},
+    {base::Value::Type::NONE, "Null"},
+    {base::Value::Type::BOOLEAN, "Boolean"},
+    {base::Value::Type::INTEGER, "Integer"},
+    {base::Value::Type::DOUBLE, "Double"},
+    {base::Value::Type::STRING, "String"},
+    {base::Value::Type::BINARY, "Binary"},
+    {base::Value::Type::DICTIONARY, "Object"},
+    {base::Value::Type::LIST, "Array"},
 };
 
 }  // anonymous namespace
@@ -354,14 +354,14 @@ std::unique_ptr<PropType> ObjectSchema::PropFromJson(
     const base::Value& value,
     const PropType* base_schema,
     ErrorPtr* error) {
-  if (value.IsType(base::Value::TYPE_STRING)) {
+  if (value.IsType(base::Value::Type::STRING)) {
     // A string value is a short-hand object specification and provides
     // the parameter type.
     return PropFromJsonString(value, base_schema, error);
-  } else if (value.IsType(base::Value::TYPE_LIST)) {
+  } else if (value.IsType(base::Value::Type::LIST)) {
     // One of the enumerated types.
     return PropFromJsonArray(value, base_schema, error);
-  } else if (value.IsType(base::Value::TYPE_DICTIONARY)) {
+  } else if (value.IsType(base::Value::Type::DICTIONARY)) {
     // Full parameter definition.
     return PropFromJsonObject(value, base_schema, error);
   }
