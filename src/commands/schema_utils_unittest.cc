@@ -53,9 +53,9 @@ TEST(CommandSchemaUtils, TypedValueToJson_Object) {
   ValueMap object;
 
   object.insert(std::make_pair(
-      "width", int_type.CreateValue(base::FundamentalValue{640}, nullptr)));
+      "width", int_type.CreateValue(base::Value{640}, nullptr)));
   object.insert(std::make_pair(
-      "height", int_type.CreateValue(base::FundamentalValue{480}, nullptr)));
+      "height", int_type.CreateValue(base::Value{480}, nullptr)));
   EXPECT_JSON_EQ("{'height':480,'width':640}", *TypedValueToJson(object));
 }
 
@@ -63,8 +63,8 @@ TEST(CommandSchemaUtils, TypedValueToJson_Array) {
   IntPropType int_type;
   ValueVector arr;
 
-  arr.push_back(int_type.CreateValue(base::FundamentalValue{640}, nullptr));
-  arr.push_back(int_type.CreateValue(base::FundamentalValue{480}, nullptr));
+  arr.push_back(int_type.CreateValue(base::Value{640}, nullptr));
+  arr.push_back(int_type.CreateValue(base::Value{480}, nullptr));
   EXPECT_JSON_EQ("[640,480]", *TypedValueToJson(arr));
 }
 
@@ -176,7 +176,7 @@ TEST(CommandSchemaUtils, TypedValueFromJson_Object) {
                                  &type, &value, nullptr));
   ValueMap value2;
   value2.insert(std::make_pair(
-      "age", age_prop.CreateValue(base::FundamentalValue{20}, nullptr)));
+      "age", age_prop.CreateValue(base::Value{20}, nullptr)));
   value2.insert(std::make_pair(
       "name", name_prop.CreateValue(base::StringValue("Bob"), nullptr)));
   EXPECT_EQ(value2, value);

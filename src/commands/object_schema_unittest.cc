@@ -161,7 +161,7 @@ TEST(CommandSchema, IntPropType_Validate) {
 TEST(CommandSchema, IntPropType_CreateValue) {
   IntPropType prop;
   ErrorPtr error;
-  auto val = prop.CreateValue(base::FundamentalValue{2}, &error);
+  auto val = prop.CreateValue(base::Value{2}, &error);
   ASSERT_NE(nullptr, val.get());
   EXPECT_EQ(nullptr, error.get());
   EXPECT_EQ(2, val->GetValue());
@@ -250,7 +250,7 @@ TEST(CommandSchema, BoolPropType_Validate) {
 TEST(CommandSchema, BoolPropType_CreateValue) {
   BooleanPropType prop;
   ErrorPtr error;
-  auto val = prop.CreateValue(base::FundamentalValue{true}, &error);
+  auto val = prop.CreateValue(base::Value{true}, &error);
   ASSERT_NE(nullptr, val.get());
   EXPECT_EQ(nullptr, error.get());
   EXPECT_TRUE(val->GetValue());
@@ -367,7 +367,7 @@ TEST(CommandSchema, DoublePropType_Validate) {
 TEST(CommandSchema, DoublePropType_CreateValue) {
   DoublePropType prop;
   ErrorPtr error;
-  auto val = prop.CreateValue(base::FundamentalValue{2.0}, &error);
+  auto val = prop.CreateValue(base::Value{2.0}, &error);
   ASSERT_NE(nullptr, val.get());
   EXPECT_EQ(nullptr, error.get());
   EXPECT_DOUBLE_EQ(2.0, val->GetValue());
@@ -497,7 +497,7 @@ TEST(CommandSchema, StringPropType_CreateValue) {
   EXPECT_EQ(nullptr, error.get());
   EXPECT_EQ("blah", val->GetValue());
 
-  val = prop.CreateValue(base::FundamentalValue{4}, &error);
+  val = prop.CreateValue(base::Value{4}, &error);
   EXPECT_EQ(nullptr, val.get());
   ASSERT_NE(nullptr, error.get());
   EXPECT_EQ(errors::commands::kTypeMismatch, error->GetCode());
@@ -744,8 +744,8 @@ TEST(CommandSchema, ObjectPropType_CreateValue) {
           .get(),
       nullptr, nullptr));
   ValueMap obj{
-      {"width", int_type.CreateValue(base::FundamentalValue{10}, nullptr)},
-      {"height", int_type.CreateValue(base::FundamentalValue{20}, nullptr)},
+      {"width", int_type.CreateValue(base::Value{10}, nullptr)},
+      {"height", int_type.CreateValue(base::Value{20}, nullptr)},
   };
 
   ErrorPtr error;

@@ -56,27 +56,24 @@ bool ErrorMissingProperty(ErrorPtr* error,
 }  // namespace
 
 // Specializations of TypedValueToJson<T>() for supported C++ types.
-std::unique_ptr<base::FundamentalValue> TypedValueToJson(bool value) {
-  return std::unique_ptr<base::FundamentalValue>(
-      new base::FundamentalValue(value));
+std::unique_ptr<base::Value> TypedValueToJson(bool value) {
+  return std::make_unique<base::Value>(value);
 }
 
-std::unique_ptr<base::FundamentalValue> TypedValueToJson(int value) {
-  return std::unique_ptr<base::FundamentalValue>(
-      new base::FundamentalValue(value));
+std::unique_ptr<base::Value> TypedValueToJson(int value) {
+  return std::make_unique<base::Value>(value);
 }
 
-std::unique_ptr<base::FundamentalValue> TypedValueToJson(double value) {
-  return std::unique_ptr<base::FundamentalValue>(
-      new base::FundamentalValue(value));
+std::unique_ptr<base::Value> TypedValueToJson(double value) {
+  return std::make_unique<base::Value>(value);
 }
 
 std::unique_ptr<base::StringValue> TypedValueToJson(const std::string& value) {
-  return std::unique_ptr<base::StringValue>(new base::StringValue(value));
+  return std::make_unique<base::StringValue>(value);
 }
 
 std::unique_ptr<base::DictionaryValue> TypedValueToJson(const ValueMap& value) {
-  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue);
+  auto dict = std::make_unique<base::DictionaryValue>();
   for (const auto& pair : value) {
     auto prop_value = pair.second->ToJson();
     CHECK(prop_value);
@@ -86,7 +83,7 @@ std::unique_ptr<base::DictionaryValue> TypedValueToJson(const ValueMap& value) {
 }
 
 std::unique_ptr<base::ListValue> TypedValueToJson(const ValueVector& value) {
-  std::unique_ptr<base::ListValue> list(new base::ListValue);
+  auto list = std::make_unique<base::ListValue>();
   for (const auto& item : value) {
     auto json = item->ToJson();
     CHECK(json);

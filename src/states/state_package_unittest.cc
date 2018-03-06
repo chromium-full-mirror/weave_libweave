@@ -246,14 +246,14 @@ TEST_F(StatePackageTest, SetPropertyValue_Simple) {
   EXPECT_TRUE(
       package_->SetPropertyValue("color", base::StringValue{"blue"}, nullptr));
   EXPECT_JSON_EQ("'blue'", *package_->GetPropertyValue("color", nullptr));
-  EXPECT_TRUE(package_->SetPropertyValue("light", base::FundamentalValue{false},
+  EXPECT_TRUE(package_->SetPropertyValue("light", base::Value{false},
                                          nullptr));
   bool light = false;
   ASSERT_TRUE(
       package_->GetPropertyValue("light", nullptr)->GetAsBoolean(&light));
   EXPECT_FALSE(light);
   EXPECT_TRUE(
-      package_->SetPropertyValue("iso", base::FundamentalValue{400}, nullptr));
+      package_->SetPropertyValue("iso", base::Value{400}, nullptr));
   EXPECT_JSON_EQ("400", *package_->GetPropertyValue("iso", nullptr));
 }
 
@@ -277,13 +277,13 @@ TEST_F(StatePackageTest, SetPropertyValue_Object) {
 TEST_F(StatePackageTest, SetPropertyValue_Error_TypeMismatch) {
   ErrorPtr error;
   ASSERT_FALSE(
-      package_->SetPropertyValue("color", base::FundamentalValue{12}, &error));
+      package_->SetPropertyValue("color", base::Value{12}, &error));
   EXPECT_EQ(errors::commands::kDomain, error->GetDomain());
   EXPECT_EQ(errors::commands::kTypeMismatch, error->GetCode());
   error.reset();
 
   ASSERT_FALSE(
-      package_->SetPropertyValue("iso", base::FundamentalValue{false}, &error));
+      package_->SetPropertyValue("iso", base::Value{false}, &error));
   EXPECT_EQ(errors::commands::kDomain, error->GetDomain());
   EXPECT_EQ(errors::commands::kTypeMismatch, error->GetCode());
 }
@@ -291,7 +291,7 @@ TEST_F(StatePackageTest, SetPropertyValue_Error_TypeMismatch) {
 TEST_F(StatePackageTest, SetPropertyValue_Error_OutOfRange) {
   ErrorPtr error;
   ASSERT_FALSE(
-      package_->SetPropertyValue("iso", base::FundamentalValue{150}, &error));
+      package_->SetPropertyValue("iso", base::Value{150}, &error));
   EXPECT_EQ(errors::commands::kDomain, error->GetDomain());
   EXPECT_EQ(errors::commands::kOutOfRange, error->GetCode());
 }
@@ -349,7 +349,7 @@ TEST_F(StatePackageTest, SetPropertyValue_Error_Object_MissingProperty) {
 
 TEST_F(StatePackageTest, SetPropertyValue_Error_Unknown) {
   ErrorPtr error;
-  ASSERT_FALSE(package_->SetPropertyValue("volume", base::FundamentalValue{100},
+  ASSERT_FALSE(package_->SetPropertyValue("volume", base::Value{100},
                                           &error));
   EXPECT_EQ(errors::state::kDomain, error->GetDomain());
   EXPECT_EQ(errors::state::kPropertyNotDefined, error->GetCode());

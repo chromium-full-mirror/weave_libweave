@@ -57,16 +57,16 @@ class InheritableAttribute final {
 // A bunch of helper function to create base::Value for specific C++ classes,
 // including vectors of types. These are used in template classes below
 // to simplify specialization logic.
-std::unique_ptr<base::FundamentalValue> TypedValueToJson(bool value);
-std::unique_ptr<base::FundamentalValue> TypedValueToJson(int value);
-std::unique_ptr<base::FundamentalValue> TypedValueToJson(double value);
+std::unique_ptr<base::Value> TypedValueToJson(bool value);
+std::unique_ptr<base::Value> TypedValueToJson(int value);
+std::unique_ptr<base::Value> TypedValueToJson(double value);
 std::unique_ptr<base::StringValue> TypedValueToJson(const std::string& value);
 std::unique_ptr<base::DictionaryValue> TypedValueToJson(const ValueMap& value);
 std::unique_ptr<base::ListValue> TypedValueToJson(const ValueVector& value);
 template <typename T>
 std::unique_ptr<base::ListValue> TypedValueToJson(
     const std::vector<T>& values) {
-  std::unique_ptr<base::ListValue> list(new base::ListValue);
+  auto list = std::make_unique<base::ListValue>();
   for (const auto& v : values) {
     auto json = TypedValueToJson(v);
     CHECK(json);
