@@ -74,7 +74,7 @@ TEST_F(CommandInstanceTest, Test) {
   IntPropType int_prop;
   ValueMap params;
   params["phrase"] =
-      str_prop.CreateValue(base::StringValue{"iPityDaFool"}, nullptr);
+      str_prop.CreateValue(base::Value{"iPityDaFool"}, nullptr);
   params["volume"] = int_prop.CreateValue(base::Value{5}, nullptr);
   CommandInstance instance{"robot.speak", Command::Origin::kCloud,
                            dict_.FindCommand("robot.speak"), params};

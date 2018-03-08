@@ -179,7 +179,7 @@ TEST_F(StateManagerTest, SetPropertyValue) {
               NotifyPropertiesUpdated(timestamp_, expected_prop_set))
       .WillOnce(Return(true));
   ASSERT_TRUE(SetPropertyValue("device.state_property",
-                               base::StringValue{"Test Value"}, nullptr));
+                               base::Value{"Test Value"}, nullptr));
   auto expected = R"({
     'base': {
       'manufacturer': 'Test Factory',
@@ -227,7 +227,7 @@ TEST_F(StateManagerTest, GetAndClearRecordedStateChanges) {
   EXPECT_CALL(mock_state_change_queue_, NotifyPropertiesUpdated(timestamp_, _))
       .WillOnce(Return(true));
   ASSERT_TRUE(SetPropertyValue("device.state_property",
-                               base::StringValue{"Test Value"}, nullptr));
+                               base::Value{"Test Value"}, nullptr));
   std::vector<StateChange> expected_val;
   expected_val.emplace_back(
       timestamp_, ValueMap{{"device.state_property",

@@ -166,7 +166,7 @@ TEST(CommandSchema, IntPropType_CreateValue) {
   EXPECT_EQ(nullptr, error.get());
   EXPECT_EQ(2, val->GetValue());
 
-  val = prop.CreateValue(base::StringValue{"blah"}, &error);
+  val = prop.CreateValue(base::Value{"blah"}, &error);
   EXPECT_EQ(nullptr, val.get());
   ASSERT_NE(nullptr, error.get());
   EXPECT_EQ(errors::commands::kTypeMismatch, error->GetCode());
@@ -255,7 +255,7 @@ TEST(CommandSchema, BoolPropType_CreateValue) {
   EXPECT_EQ(nullptr, error.get());
   EXPECT_TRUE(val->GetValue());
 
-  val = prop.CreateValue(base::StringValue{"blah"}, &error);
+  val = prop.CreateValue(base::Value{"blah"}, &error);
   EXPECT_EQ(nullptr, val.get());
   ASSERT_NE(nullptr, error.get());
   EXPECT_EQ(errors::commands::kTypeMismatch, error->GetCode());
@@ -372,7 +372,7 @@ TEST(CommandSchema, DoublePropType_CreateValue) {
   EXPECT_EQ(nullptr, error.get());
   EXPECT_DOUBLE_EQ(2.0, val->GetValue());
 
-  val = prop.CreateValue(base::StringValue{"blah"}, &error);
+  val = prop.CreateValue(base::Value{"blah"}, &error);
   EXPECT_EQ(nullptr, val.get());
   ASSERT_NE(nullptr, error.get());
   EXPECT_EQ(errors::commands::kTypeMismatch, error->GetCode());
@@ -492,7 +492,7 @@ TEST(CommandSchema, StringPropType_Validate) {
 TEST(CommandSchema, StringPropType_CreateValue) {
   StringPropType prop;
   ErrorPtr error;
-  auto val = prop.CreateValue(base::StringValue{"blah"}, &error);
+  auto val = prop.CreateValue(base::Value{"blah"}, &error);
   ASSERT_NE(nullptr, val.get());
   EXPECT_EQ(nullptr, error.get());
   EXPECT_EQ("blah", val->GetValue());
@@ -755,7 +755,7 @@ TEST(CommandSchema, ObjectPropType_CreateValue) {
   EXPECT_EQ(nullptr, error.get());
   EXPECT_EQ(obj, val->GetValue());
 
-  val = prop.CreateValue(base::StringValue{"blah"}, &error);
+  val = prop.CreateValue(base::Value{"blah"}, &error);
   EXPECT_EQ(nullptr, val.get());
   ASSERT_NE(nullptr, error.get());
   EXPECT_EQ(errors::commands::kTypeMismatch, error->GetCode());
@@ -888,7 +888,7 @@ TEST(CommandSchema, ArrayPropType_CreateValue) {
   EXPECT_JSON_EQ("[{'height':20,'width':10},{'height':18,'width':17}]",
                  *val->ToJson());
 
-  val = prop.CreateValue(base::StringValue{"blah"}, &error);
+  val = prop.CreateValue(base::Value{"blah"}, &error);
   EXPECT_EQ(nullptr, val.get());
   ASSERT_NE(nullptr, error.get());
   EXPECT_EQ(errors::commands::kTypeMismatch, error->GetCode());

@@ -244,7 +244,7 @@ TEST_F(StatePackageTest, GetPropertyValue_Unknown) {
 
 TEST_F(StatePackageTest, SetPropertyValue_Simple) {
   EXPECT_TRUE(
-      package_->SetPropertyValue("color", base::StringValue{"blue"}, nullptr));
+      package_->SetPropertyValue("color", base::Value{"blue"}, nullptr));
   EXPECT_JSON_EQ("'blue'", *package_->GetPropertyValue("color", nullptr));
   EXPECT_TRUE(package_->SetPropertyValue("light", base::Value{false},
                                          nullptr));

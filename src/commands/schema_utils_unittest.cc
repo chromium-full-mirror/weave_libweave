@@ -178,7 +178,7 @@ TEST(CommandSchemaUtils, TypedValueFromJson_Object) {
   value2.insert(std::make_pair(
       "age", age_prop.CreateValue(base::Value{20}, nullptr)));
   value2.insert(std::make_pair(
-      "name", name_prop.CreateValue(base::StringValue("Bob"), nullptr)));
+      "name", name_prop.CreateValue(base::Value("Bob"), nullptr)));
   EXPECT_EQ(value2, value);
 
   ErrorPtr error;
@@ -198,8 +198,8 @@ TEST(CommandSchemaUtils, TypedValueFromJson_Array) {
   EXPECT_TRUE(TypedValueFromJson(CreateValue("['foo', 'bar']").get(), &type,
                                  &arr, nullptr));
   ValueVector arr2;
-  arr2.push_back(str_type.CreateValue(base::StringValue{"foo"}, nullptr));
-  arr2.push_back(str_type.CreateValue(base::StringValue{"bar"}, nullptr));
+  arr2.push_back(str_type.CreateValue(base::Value{"foo"}, nullptr));
+  arr2.push_back(str_type.CreateValue(base::Value{"bar"}, nullptr));
   EXPECT_EQ(arr2, arr);
 
   ErrorPtr error;

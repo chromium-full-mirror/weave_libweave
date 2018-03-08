@@ -68,8 +68,8 @@ std::unique_ptr<base::Value> TypedValueToJson(double value) {
   return std::make_unique<base::Value>(value);
 }
 
-std::unique_ptr<base::StringValue> TypedValueToJson(const std::string& value) {
-  return std::make_unique<base::StringValue>(value);
+std::unique_ptr<base::Value> TypedValueToJson(const std::string& value) {
+  return std::make_unique<base::Value>(value);
 }
 
 std::unique_ptr<base::DictionaryValue> TypedValueToJson(const ValueMap& value) {
