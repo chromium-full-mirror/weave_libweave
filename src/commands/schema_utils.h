@@ -60,7 +60,7 @@ class InheritableAttribute final {
 std::unique_ptr<base::Value> TypedValueToJson(bool value);
 std::unique_ptr<base::Value> TypedValueToJson(int value);
 std::unique_ptr<base::Value> TypedValueToJson(double value);
-std::unique_ptr<base::StringValue> TypedValueToJson(const std::string& value);
+std::unique_ptr<base::Value> TypedValueToJson(const std::string& value);
 std::unique_ptr<base::DictionaryValue> TypedValueToJson(const ValueMap& value);
 std::unique_ptr<base::ListValue> TypedValueToJson(const ValueVector& value);
 template <typename T>

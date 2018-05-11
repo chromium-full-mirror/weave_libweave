@@ -25,20 +25,20 @@ std::unique_ptr<const PropValue> make_prop_value(const base::Value& value) {
 }
 
 inline std::unique_ptr<const PropValue> make_int_prop_value(int value) {
-  return make_prop_value<int>(base::FundamentalValue{value});
+  return make_prop_value<int>(base::Value{value});
 }
 
 inline std::unique_ptr<const PropValue> make_double_prop_value(double value) {
-  return make_prop_value<double>(base::FundamentalValue{value});
+  return make_prop_value<double>(base::Value{value});
 }
 
 inline std::unique_ptr<const PropValue> make_bool_prop_value(bool value) {
-  return make_prop_value<bool>(base::FundamentalValue{value});
+  return make_prop_value<bool>(base::Value{value});
 }
 
 inline std::unique_ptr<const PropValue> make_string_prop_value(
     const std::string& value) {
-  return make_prop_value<std::string>(base::StringValue{value});
+  return make_prop_value<std::string>(base::Value{value});
 }
 
 }  // namespace test
