@@ -77,7 +77,8 @@ CommandInstance::CommandInstance(const std::string& name,
 }
 
 CommandInstance::~CommandInstance() {
-  FOR_EACH_OBSERVER(Observer, observers_, OnCommandDestroyed());
+  for (Observer& observer : observers_)
+    observer.OnCommandDestroyed();
 }
 
 const std::string& CommandInstance::GetID() const {
@@ -129,7 +130,8 @@ bool CommandInstance::SetProgress(const base::DictionaryValue& progress,
 
   if (obj != progress_) {
     progress_ = obj;
-    FOR_EACH_OBSERVER(Observer, observers_, OnProgressChanged());
+    for (Observer& observer : observers_)
+      observer.OnProgressChanged();
   }
 
   return true;
@@ -148,7 +150,8 @@ bool CommandInstance::Complete(const base::DictionaryValue& results,
 
   if (obj != results_) {
     results_ = obj;
-    FOR_EACH_OBSERVER(Observer, observers_, OnResultsChanged());
+    for (Observer& observer : observers_)
+      observer.OnResultsChanged();
   }
   // Change status even if result is unchanged.
   bool result = SetStatus(State::kDone, error);
@@ -159,7 +162,8 @@ bool CommandInstance::Complete(const base::DictionaryValue& results,
 
 bool CommandInstance::SetError(const Error* command_error, ErrorPtr* error) {
   error_ = command_error ? command_error->Clone() : nullptr;
-  FOR_EACH_OBSERVER(Observer, observers_, OnErrorChanged());
+  for (Observer& observer : observers_)
+    observer.OnErrorChanged();
   return SetStatus(State::kError, error);
 }
 
@@ -295,7 +299,8 @@ bool CommandInstance::Pause(ErrorPtr* error) {
 
 bool CommandInstance::Abort(const Error* command_error, ErrorPtr* error) {
   error_ = command_error ? command_error->Clone() : nullptr;
-  FOR_EACH_OBSERVER(Observer, observers_, OnErrorChanged());
+  for (Observer& observer : observers_)
+    observer.OnErrorChanged();
   bool result = SetStatus(State::kAborted, error);
   RemoveFromQueue();
   // The command will be destroyed after that, so do not access any members.
@@ -327,7 +332,8 @@ bool CommandInstance::SetStatus(Command::State status, ErrorPtr* error) {
       break;
   }
   state_ = status;
-  FOR_EACH_OBSERVER(Observer, observers_, OnStateChanged());
+  for (Observer& observer : observers_)
+    observer.OnStateChanged();
   return true;
 }
 

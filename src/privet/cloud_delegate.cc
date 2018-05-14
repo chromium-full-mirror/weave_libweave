@@ -377,15 +377,18 @@ std::unique_ptr<CloudDelegate> CloudDelegate::CreateDefault(
 }
 
 void CloudDelegate::NotifyOnDeviceInfoChanged() {
-  FOR_EACH_OBSERVER(Observer, observer_list_, OnDeviceInfoChanged());
+  for (Observer& observer : observer_list_)
+    observer.OnDeviceInfoChanged();
 }
 
 void CloudDelegate::NotifyOnCommandDefsChanged() {
-  FOR_EACH_OBSERVER(Observer, observer_list_, OnCommandDefsChanged());
+  for (Observer& observer : observer_list_)
+    observer.OnCommandDefsChanged();
 }
 
 void CloudDelegate::NotifyOnStateChanged() {
-  FOR_EACH_OBSERVER(Observer, observer_list_, OnStateChanged());
+  for (Observer& observer : observer_list_)
+    observer.OnStateChanged();
 }
 
 }  // namespace privet
