@@ -171,14 +171,15 @@ class DeviceRegistrationInfoTest : public ::testing::Test {
 
   bool RefreshAccessToken(ErrorPtr* error) const {
     bool succeeded = false;
-    auto callback = [&succeeded, &error](ErrorPtr in_error) {
-      if (error) {
-        *error = std::move(in_error);
+    auto callback = [](bool* succeeded, ErrorPtr* out_error,
+                       ErrorPtr in_error) {
+      if (out_error) {
+        *out_error = std::move(in_error);
         return;
       }
-      succeeded = true;
+      *succeeded = true;
     };
-    dev_reg_->RefreshAccessToken(base::Bind(callback));
+    dev_reg_->RefreshAccessToken(base::Bind(callback, &succeeded, error));
     return succeeded;
   }
 
@@ -338,15 +339,15 @@ TEST_F(DeviceRegistrationInfoTest, GetDeviceInfo) {
           })));
 
   bool succeeded = false;
-  auto callback = [&succeeded](const base::DictionaryValue& info,
-                               ErrorPtr error) {
+  auto callback = [](bool* succeeded, const base::DictionaryValue& info,
+                     ErrorPtr error) {
     EXPECT_FALSE(error);
     std::string id;
     EXPECT_TRUE(info.GetString("id", &id));
     EXPECT_EQ(test_data::kDeviceId, id);
-    succeeded = true;
+    *succeeded = true;
   };
-  dev_reg_->GetDeviceInfo(base::Bind(callback));
+  dev_reg_->GetDeviceInfo(base::Bind(callback, &succeeded));
   EXPECT_TRUE(succeeded);
 }
 
@@ -485,19 +486,24 @@ TEST_F(DeviceRegistrationInfoTest, RegisterDevice) {
 
   bool done = false;
   dev_reg_->RegisterDevice(
-      test_data::kClaimTicketId, base::Bind([this, &done](ErrorPtr error) {
-        EXPECT_FALSE(error);
-        done = true;
-        task_runner_.Break();
-        EXPECT_EQ(GcdState::kConnecting, GetGcdState());
+      test_data::kClaimTicketId,
+      base::Bind(
+          [](DeviceRegistrationInfo* dev_reg,
+             provider::test::FakeTaskRunner* task_runner, bool* done,
+             ErrorPtr error) {
+            EXPECT_FALSE(error);
+            *done = true;
+            task_runner->Break();
+            EXPECT_EQ(GcdState::kConnecting, dev_reg->GetGcdState());
 
-        // Validate the device info saved to storage...
-        EXPECT_EQ(test_data::kDeviceId, dev_reg_->GetSettings().cloud_id);
-        EXPECT_EQ(test_data::kRefreshToken,
-                  dev_reg_->GetSettings().refresh_token);
-        EXPECT_EQ(test_data::kRobotAccountEmail,
-                  dev_reg_->GetSettings().robot_account);
-      }));
+            // Validate the device info saved to storage...
+            EXPECT_EQ(test_data::kDeviceId, dev_reg->GetSettings().cloud_id);
+            EXPECT_EQ(test_data::kRefreshToken,
+                      dev_reg->GetSettings().refresh_token);
+            EXPECT_EQ(test_data::kRobotAccountEmail,
+                      dev_reg->GetSettings().robot_account);
+          },
+          dev_reg_.get(), &task_runner_, &done));
   task_runner_.Run();
   EXPECT_TRUE(done);
 }

@@ -272,13 +272,18 @@ class WeaveTest : public ::testing::Test {
 
   void NotifyNetworkChanged(provider::Network::State state,
                             base::TimeDelta delay) {
-    auto task = [this, state] {
-      EXPECT_CALL(network_, GetConnectionState()).WillRepeatedly(Return(state));
-      for (const auto& cb : network_callbacks_)
+    auto task = [](provider::test::MockNetwork* network,
+                   std::vector<provider::Network::ConnectionChangedCallback>*
+                       network_callbacks,
+                   provider::Network::State state) {
+      EXPECT_CALL(*network, GetConnectionState()).WillRepeatedly(Return(state));
+      for (const auto& cb : *network_callbacks)
         cb.Run();
     };
 
-    task_runner_.PostDelayedTask(FROM_HERE, base::Bind(task), delay);
+    task_runner_.PostDelayedTask(
+        FROM_HERE, base::Bind(task, &network_, &network_callbacks_, state),
+        delay);
   }
 
   std::map<std::string, provider::HttpServer::RequestHandlerCallback>
@@ -369,12 +374,16 @@ TEST_F(WeaveBasicTest, Register) {
   InitDnsSdPublishing(true, "DB");
 
   bool done = false;
-  device_->Register("TICKET_ID", base::Bind([this, &done](ErrorPtr error) {
-                      EXPECT_FALSE(error);
-                      done = true;
-                      task_runner_.Break();
-                      EXPECT_EQ("CLOUD_ID", device_->GetSettings().cloud_id);
-                    }));
+  device_->Register("TICKET_ID",
+                    base::Bind(
+                        [](provider::test::FakeTaskRunner* task_runner,
+                           weave::Device* device, bool* done, ErrorPtr error) {
+                          EXPECT_FALSE(error);
+                          *done = true;
+                          task_runner->Break();
+                          EXPECT_EQ("CLOUD_ID", device->GetSettings().cloud_id);
+                        },
+                        &task_runner_, device_.get(), &done));
   task_runner_.Run();
   EXPECT_TRUE(done);
 }

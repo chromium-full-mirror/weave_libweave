@@ -24,11 +24,13 @@ TEST(Stream, CopyStreams) {
   bool done = false;
 
   auto callback = base::Bind(
-      [&test_data, &done, &destination](size_t size, ErrorPtr error) {
+      [](std::vector<uint8_t>* test_data, bool* done, MemoryStream* destination,
+         size_t size, ErrorPtr error) {
         EXPECT_FALSE(error);
-        done = true;
-        EXPECT_EQ(test_data, destination.GetData());
-      });
+        *done = true;
+        EXPECT_EQ(*test_data, destination->GetData());
+      },
+      &test_data, &done, &destination);
   StreamCopier copier{&source, &destination};
   copier.Copy(callback);
 

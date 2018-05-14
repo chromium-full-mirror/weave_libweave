@@ -151,10 +151,10 @@ TEST_F(StateChangeQueueTest, MaxQueueSize) {
 TEST_F(StateChangeQueueTest, ImmediateStateChangeNotification) {
   // When queue is empty, registering a new callback will trigger it.
   bool called = false;
-  auto callback = [&called](StateChangeQueueInterface::UpdateID id) {
-    called = true;
+  auto callback = [](bool* called, StateChangeQueueInterface::UpdateID id) {
+    *called = true;
   };
-  queue_->AddOnStateUpdatedCallback(base::Bind(callback));
+  queue_->AddOnStateUpdatedCallback(base::Bind(callback, &called));
   EXPECT_TRUE(called);
 }
 

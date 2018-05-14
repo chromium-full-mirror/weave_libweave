@@ -94,8 +94,8 @@ TEST(CommandManager, ShouldLoadStandardAndTestDefinitions) {
 TEST(CommandManager, UpdateCommandVisibility) {
   CommandManager manager;
   int update_count = 0;
-  auto on_command_change = [&update_count]() { update_count++; };
-  manager.AddCommandDefChanged(base::Bind(on_command_change));
+  auto on_command_change = [](int* update_count) { (*update_count)++; };
+  manager.AddCommandDefChanged(base::Bind(on_command_change, &update_count));
 
   auto json = CreateDictionaryValue(R"({
     'foo': {
