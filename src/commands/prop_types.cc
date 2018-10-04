@@ -543,11 +543,12 @@ bool ObjectPropType::ObjectSchemaFromJson(const base::DictionaryValue* value,
                          commands::attributes::kObject_Required);
       return false;
     }
-    for (const base::Value* value : *required_list) {
+    for (const base::Value& value :
+             base::ValueReferenceAdapter(*required_list)) {
       std::string name;
-      if (!value->GetAsString(&name)) {
+      if (!value.GetAsString(&name)) {
         std::string json_value;
-        CHECK(base::JSONWriter::Write(*value, &json_value));
+        CHECK(base::JSONWriter::Write(value, &json_value));
         Error::AddToPrintf(
             error, FROM_HERE, errors::commands::kDomain,
             errors::commands::kInvalidObjectSchema,

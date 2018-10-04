@@ -1039,15 +1039,15 @@ void DeviceRegistrationInfo::ProcessInitialCommandList(
     ErrorPtr error) {
   if (error)
     return;
-  for (const base::Value* command : commands) {
+  for (const base::Value& command : base::ValueReferenceAdapter(commands)) {
     const base::DictionaryValue* command_dict{nullptr};
-    if (!command->GetAsDictionary(&command_dict)) {
-      LOG(WARNING) << "Not a command dictionary: " << *command;
+    if (!command.GetAsDictionary(&command_dict)) {
+      LOG(WARNING) << "Not a command dictionary: " << command;
       continue;
     }
     std::string command_state;
     if (!command_dict->GetString("state", &command_state)) {
-      LOG(WARNING) << "Command with no state at " << *command;
+      LOG(WARNING) << "Command with no state at " << command;
       continue;
     }
     if (command_state == "error" && command_state == "inProgress" &&
@@ -1055,7 +1055,7 @@ void DeviceRegistrationInfo::ProcessInitialCommandList(
       // It's a limbo command, abort it.
       std::string command_id;
       if (!command_dict->GetString("id", &command_id)) {
-        LOG(WARNING) << "Command with no ID at " << *command;
+        LOG(WARNING) << "Command with no ID at " << command;
         continue;
       }
 
@@ -1077,10 +1077,10 @@ void DeviceRegistrationInfo::PublishCommands(const base::ListValue& commands,
                                              ErrorPtr error) {
   if (error)
     return;
-  for (const base::Value* command : commands) {
+  for (const base::Value& command : base::ValueReferenceAdapter(commands)) {
     const base::DictionaryValue* command_dict{nullptr};
-    if (!command->GetAsDictionary(&command_dict)) {
-      LOG(WARNING) << "Not a command dictionary: " << *command;
+    if (!command.GetAsDictionary(&command_dict)) {
+      LOG(WARNING) << "Not a command dictionary: " << command;
       continue;
     }
     PublishCommand(*command_dict);
