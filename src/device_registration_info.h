@@ -110,6 +110,8 @@ class DeviceRegistrationInfo : public NotificationDelegate,
   // Starts GCD device if credentials available.
   void Start();
 
+  void SwitchXmppChannel(const std::string& channel);
+
   // Updates a command (override from CloudCommandUpdateInterface).
   void UpdateCommand(const std::string& command_id,
                      const base::DictionaryValue& command_patch,
@@ -340,6 +342,8 @@ class DeviceRegistrationInfo : public NotificationDelegate,
   bool notification_channel_starting_{false};
 
   provider::Network* network_{nullptr};
+
+  std::string xmpp_channel_;
 
   // Tracks our GCD state.
   GcdState gcd_state_{GcdState::kUnconfigured};

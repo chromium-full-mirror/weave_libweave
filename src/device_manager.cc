@@ -84,6 +84,10 @@ GcdState DeviceManager::GetGcdState() const {
   return device_info_->GetGcdState();
 }
 
+void DeviceManager::SetXmppChannel(const std::string& channel) {
+  device_info_->SwitchXmppChannel(channel);
+}
+
 void DeviceManager::AddGcdStateChangedCallback(
     const GcdStateChangedCallback& callback) {
   device_info_->AddGcdStateChangedCallback(callback);

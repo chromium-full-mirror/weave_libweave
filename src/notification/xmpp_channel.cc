@@ -89,11 +89,13 @@ const int kConnectingTimeoutAfterNetChangeSeconds = 30;
 
 }  // namespace
 
-XmppChannel::XmppChannel(const std::string& account,
+XmppChannel::XmppChannel(const std::string& channel,
+                         const std::string& account,
                          const std::string& access_token,
                          provider::TaskRunner* task_runner,
                          provider::Network* network)
-    : account_{account},
+    : channel_{channel},
+      account_{account},
       access_token_{access_token},
       network_{network},
       backoff_entry_{&kDefaultBackoffPolicy},
@@ -246,7 +248,7 @@ void XmppChannel::OnSessionEstablished(std::unique_ptr<XmlNode> reply) {
   state_ = XmppState::kSubscribeStarted;
   std::string body =
       "<subscribe xmlns='google:push'>"
-      "<item channel='cloud_devices' from=''/></subscribe>";
+      "<item channel='" + channel_ + "' from=''/></subscribe>";
   iq_stanza_handler_->SendRequest(
       "set", "", account_, body,
       base::Bind(&XmppChannel::OnSubscribed, task_ptr_factory_.GetWeakPtr()),

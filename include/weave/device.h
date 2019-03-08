@@ -111,6 +111,8 @@ class Device {
   // Returns current state of GCD connection.
   virtual GcdState GetGcdState() const = 0;
 
+  virtual void SetXmppChannel(const std::string& channel) = 0;
+
   // Callback type for GcdStatusCallback.
   using GcdStateChangedCallback = base::Callback<void(GcdState state)>;
 

@@ -43,7 +43,8 @@ class XmppChannel : public NotificationChannel,
   // |account| is the robot account for buffet and |access_token|
   // it the OAuth token. Note that the OAuth token expires fairly frequently
   // so you will need to reset the XmppClient every time this happens.
-  XmppChannel(const std::string& account,
+  XmppChannel(const std::string& channel,
+              const std::string& account,
               const std::string& access_token,
               provider::TaskRunner* task_runner,
               provider::Network* network);
@@ -120,6 +121,8 @@ class XmppChannel : public NotificationChannel,
   void OnConnectivityChanged();
 
   XmppState state_{XmppState::kNotStarted};
+
+  std::string channel_;
 
   // Robot account name for the device.
   std::string account_;

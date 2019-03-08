@@ -60,6 +60,7 @@ class DeviceManager final : public Device {
   std::unique_ptr<base::DictionaryValue> GetState() const override;
   void Register(const std::string& ticket_id,
                 const DoneCallback& callback) override;
+  void SetXmppChannel(const std::string& channel) override;
   GcdState GetGcdState() const override;
   void AddGcdStateChangedCallback(
       const GcdStateChangedCallback& callback) override;

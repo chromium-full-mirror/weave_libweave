@@ -42,6 +42,7 @@ class MockDevice : public Device {
                     ErrorPtr* error));
   MOCK_CONST_METHOD0(MockGetState, base::DictionaryValue*());
   MOCK_CONST_METHOD0(GetGcdState, GcdState());
+  MOCK_METHOD1(SetXmppChannel, void(const std::string&));
   MOCK_METHOD1(AddGcdStateChangedCallback,
                void(const GcdStateChangedCallback& callback));
   MOCK_METHOD2(Register,

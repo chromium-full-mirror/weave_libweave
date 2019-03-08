@@ -43,6 +43,8 @@ namespace {
 const int kPollingPeriodSeconds = 7;
 const int kBackupPollingPeriodMinutes = 30;
 
+const char kDefaultXmppChannel[] = "cloud_devices";
+
 namespace fetch_reason {
 
 const char kDeviceStart[] = "device_start";  // Initial queue fetch at startup.
@@ -250,7 +252,8 @@ DeviceRegistrationInfo::DeviceRegistrationInfo(
       command_manager_{command_manager},
       state_manager_{state_manager},
       config_{std::move(config)},
-      network_{network} {
+      network_{network},
+      xmpp_channel_{kDefaultXmppChannel} {
   cloud_backoff_policy_.reset(new BackoffEntry::Policy{});
   cloud_backoff_policy_->num_errors_to_ignore = 0;
   cloud_backoff_policy_->initial_delay_ms = 1000;
@@ -312,6 +315,13 @@ void DeviceRegistrationInfo::Start() {
     //             daemons to signal that their state is up to date so that
     //             we need not wait for them.
     ScheduleCloudConnection(base::TimeDelta::FromSeconds(5));
+  }
+}
+
+void DeviceRegistrationInfo::SwitchXmppChannel(const std::string& channel) {
+  if (HaveRegistrationCredentials()) {
+    xmpp_channel_ = channel;
+    StartNotificationChannel();
   }
 }
 
@@ -468,7 +478,7 @@ void DeviceRegistrationInfo::StartNotificationChannel() {
   current_notification_channel_ = pull_channel_.get();
 
   notification_channel_starting_ = true;
-  primary_notification_channel_.reset(new XmppChannel{
+  primary_notification_channel_.reset(new XmppChannel{xmpp_channel_,
       GetSettings().robot_account, access_token_, task_runner_, network_});
   primary_notification_channel_->Start(this);
 }
@@ -1013,6 +1023,7 @@ void DeviceRegistrationInfo::FetchCommands(
     const std::string& reason) {
   fetch_commands_request_sent_ = true;
   fetch_commands_request_queued_ = false;
+  LOG(INFO) << "Fetch weave commands reason: " << reason;
   DoCloudRequest(
       HttpClient::Method::kGet,
       GetServiceURL("commands/queue", {{"deviceId", GetSettings().cloud_id},

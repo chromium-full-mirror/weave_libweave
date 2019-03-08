@@ -26,6 +26,7 @@ namespace {
 
 constexpr char kAccountName[] = "Account@Name";
 constexpr char kAccessToken[] = "AccessToken";
+constexpr char kXmppChannel[] = "cloud_devices";
 
 constexpr char kStartStreamMessage[] =
     "<stream:stream to='clouddevices.gserviceaccount.com' "
@@ -84,7 +85,8 @@ class FakeXmppChannel : public XmppChannel {
  public:
   explicit FakeXmppChannel(provider::TaskRunner* task_runner,
                            provider::Network* network)
-      : XmppChannel{kAccountName, kAccessToken, task_runner, network},
+      : XmppChannel{kXmppChannel, kAccountName, kAccessToken, task_runner,
+                    network},
         stream_{new test::FakeStream{task_runner_}},
         fake_stream_{stream_.get()} {}
 
