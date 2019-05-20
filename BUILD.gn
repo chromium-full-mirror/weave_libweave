@@ -1,0 +1,143 @@
+# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/deps.gni")
+import("//common-mk/pkg_config.gni")
+
+group("all") {
+  deps = [
+    ":libweave-${libbase_ver}",
+    ":libweave-test-${libbase_ver}",
+    ":libweave_common",
+  ]
+  if (use.test) {
+    deps += [ ":libweave_testrunner" ]
+  }
+}
+
+pkg_config("target_defaults") {
+  include_dirs = [
+    ".",
+    "./include",
+    "./third_party/modp_b64/modp_b64/",
+    "./third_party/libuweave/",
+  ]
+  pkg_deps = [
+    "expat",
+    "libcrypto",
+  ]
+}
+
+static_library("libweave_common") {
+  sources = [
+    "src/backoff_entry.cc",
+    "src/base_api_handler.cc",
+    "src/commands/cloud_command_proxy.cc",
+    "src/commands/command_definition.cc",
+    "src/commands/command_dictionary.cc",
+    "src/commands/command_instance.cc",
+    "src/commands/command_manager.cc",
+    "src/commands/command_queue.cc",
+    "src/commands/object_schema.cc",
+    "src/commands/prop_constraints.cc",
+    "src/commands/prop_types.cc",
+    "src/commands/prop_values.cc",
+    "src/commands/schema_constants.cc",
+    "src/commands/schema_utils.cc",
+    "src/config.cc",
+    "src/data_encoding.cc",
+    "src/device_manager.cc",
+    "src/device_registration_info.cc",
+    "src/error.cc",
+    "src/http_constants.cc",
+    "src/json_error_codes.cc",
+    "src/notification/notification_parser.cc",
+    "src/notification/pull_channel.cc",
+    "src/notification/xml_node.cc",
+    "src/notification/xmpp_channel.cc",
+    "src/notification/xmpp_iq_stanza_handler.cc",
+    "src/notification/xmpp_stream_parser.cc",
+    "src/privet/cloud_delegate.cc",
+    "src/privet/constants.cc",
+    "src/privet/device_delegate.cc",
+    "src/privet/device_ui_kind.cc",
+    "src/privet/openssl_utils.cc",
+    "src/privet/privet_handler.cc",
+    "src/privet/privet_manager.cc",
+    "src/privet/privet_types.cc",
+    "src/privet/publisher.cc",
+    "src/privet/security_manager.cc",
+    "src/privet/wifi_bootstrap_manager.cc",
+    "src/privet/wifi_ssid_generator.cc",
+    "src/registration_status.cc",
+    "src/states/error_codes.cc",
+    "src/states/state_change_queue.cc",
+    "src/states/state_manager.cc",
+    "src/states/state_package.cc",
+    "src/streams.cc",
+    "src/string_utils.cc",
+    "src/utils.cc",
+    "third_party/chromium/crypto/p224.cc",
+    "third_party/chromium/crypto/p224_spake.cc",
+    "third_party/chromium/crypto/sha2.cc",
+    "third_party/modp_b64/modp_b64.cc",
+  ]
+  cflags = [ "-fPIC" ]
+  configs += [
+    ":target_defaults",
+  ]
+  pkg_deps = [ "libchrome-${libbase_ver}" ]
+}
+
+static_library("libweave-${libbase_ver}") {
+  configs += [
+    ":target_defaults",
+  ]
+  deps = [
+    ":libweave_common",
+  ]
+  pkg_deps = [ "libchrome-${libbase_ver}" ]
+}
+
+static_library("libweave-test-${libbase_ver}") {
+  sources = [
+    "src/test/fake_stream.cc",
+    "src/test/fake_task_runner.cc",
+    "src/test/mock_command.cc",
+    "src/test/unittest_utils.cc",
+  ]
+  configs += [
+    ":target_defaults",
+  ]
+  pkg_deps = [ "libchrome-${libbase_ver}" ]
+}
+
+if (use.test) {
+  executable("libweave_testrunner") {
+    sources = [
+      "src/backoff_entry_unittest.cc",
+      "src/base_api_handler_unittest.cc",
+      "src/config_unittest.cc",
+      "src/data_encoding_unittest.cc",
+      "src/device_registration_info_unittest.cc",
+      "src/error_unittest.cc",
+      "src/streams_unittest.cc",
+      "src/string_utils_unittest.cc",
+      "src/test/weave_testrunner.cc",
+      "src/weave_unittest.cc",
+      "third_party/chromium/crypto/p224_spake_unittest.cc",
+      "third_party/chromium/crypto/p224_unittest.cc",
+      "third_party/chromium/crypto/sha2_unittest.cc",
+    ]
+    configs += [
+      "//common-mk:test",
+      ":target_defaults",
+    ]
+    deps = [
+      ":libweave-test-<(libbase_ver)",
+      ":libweave_common",
+    ]
+    pkg_deps = [ "libchrome-${libbase_ver}" ]
+  }
+}
