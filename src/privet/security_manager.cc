@@ -4,12 +4,8 @@
 
 #include "src/privet/security_manager.h"
 
-#include <algorithm>
-#include <limits>
-#include <memory>
-#include <set>
-
 #include <base/bind.h>
+#include <base/compiler_specific.h>
 #include <base/guid.h>
 #include <base/logging.h>
 #include <base/rand_util.h>
@@ -17,6 +13,12 @@
 #include <base/strings/stringprintf.h>
 #include <base/time/time.h>
 #include <weave/provider/task_runner.h>
+
+#include <algorithm>
+#include <limits>
+#include <memory>
+#include <set>
+#include <utility>
 
 #include "src/data_encoding.h"
 #include "src/privet/constants.h"
@@ -241,7 +243,7 @@ bool SecurityManager::StartPairing(PairingType mode,
         spake.reset(new UnsecureKeyExchanger(code));
         break;
       }
-    // Fall through...
+      FALLTHROUGH;
     default:
       Error::AddTo(error, FROM_HERE, errors::kDomain, errors::kInvalidParams,
                    "Unsupported crypto");
