@@ -12,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include <base/location.h>
 #include <base/time/clock.h>
 
 namespace weave {
@@ -23,7 +24,7 @@ class FakeTaskRunner : public TaskRunner {
   FakeTaskRunner();
   ~FakeTaskRunner() override;
 
-  void PostDelayedTask(const tracked_objects::Location& from_here,
+  void PostDelayedTask(const base::Location& from_here,
                        const base::Closure& task,
                        base::TimeDelta delay) override;
 
@@ -33,7 +34,7 @@ class FakeTaskRunner : public TaskRunner {
   base::Clock* GetClock();
 
  private:
-  void SaveTask(const tracked_objects::Location& from_here,
+  void SaveTask(const base::Location& from_here,
                 const base::Closure& task,
                 base::TimeDelta delay);
 

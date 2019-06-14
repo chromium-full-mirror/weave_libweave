@@ -23,7 +23,7 @@ class TaskRunner {
   // Posts tasks to be executed with the given delay.
   // |from_here| argument is used for debugging and usually just provided by
   // FROM_HERE macro. Implementation may ignore this argument.
-  virtual void PostDelayedTask(const tracked_objects::Location& from_here,
+  virtual void PostDelayedTask(const base::Location& from_here,
                                const base::Closure& task,
                                base::TimeDelta delay) = 0;
 

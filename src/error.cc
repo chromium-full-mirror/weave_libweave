@@ -10,7 +10,7 @@
 namespace weave {
 
 namespace {
-inline void LogError(const tracked_objects::Location& location,
+inline void LogError(const base::Location& location,
                      const std::string& domain,
                      const std::string& code,
                      const std::string& message) {
@@ -26,14 +26,14 @@ inline void LogError(const tracked_objects::Location& location,
 }
 }  // anonymous namespace
 
-ErrorPtr Error::Create(const tracked_objects::Location& location,
+ErrorPtr Error::Create(const base::Location& location,
                        const std::string& domain,
                        const std::string& code,
                        const std::string& message) {
   return Create(location, domain, code, message, ErrorPtr());
 }
 
-ErrorPtr Error::Create(const tracked_objects::Location& location,
+ErrorPtr Error::Create(const base::Location& location,
                        const std::string& domain,
                        const std::string& code,
                        const std::string& message,
@@ -44,7 +44,7 @@ ErrorPtr Error::Create(const tracked_objects::Location& location,
 }
 
 void Error::AddTo(ErrorPtr* error,
-                  const tracked_objects::Location& location,
+                  const base::Location& location,
                   const std::string& domain,
                   const std::string& code,
                   const std::string& message) {
@@ -58,7 +58,7 @@ void Error::AddTo(ErrorPtr* error,
 }
 
 void Error::AddToPrintf(ErrorPtr* error,
-                        const tracked_objects::Location& location,
+                        const base::Location& location,
                         const std::string& domain,
                         const std::string& code,
                         const char* format,
@@ -91,7 +91,7 @@ const Error* Error::GetFirstError() const {
   return err;
 }
 
-Error::Error(const tracked_objects::Location& location,
+Error::Error(const base::Location& location,
              const std::string& domain,
              const std::string& code,
              const std::string& message,

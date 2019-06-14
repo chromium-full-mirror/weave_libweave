@@ -43,7 +43,7 @@ class DeviceDelegate {
   virtual base::TimeDelta GetHttpRequestTimeout() const = 0;
 
   // Schedules a background task on the embedded TaskRunner.
-  virtual void PostDelayedTask(const tracked_objects::Location& from_here,
+  virtual void PostDelayedTask(const base::Location& from_here,
                                const base::Closure& task,
                                base::TimeDelta delay) = 0;
 

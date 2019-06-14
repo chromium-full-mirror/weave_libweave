@@ -46,7 +46,7 @@ base::Clock* FakeTaskRunner::GetClock() {
   return test_clock_.get();
 }
 
-void FakeTaskRunner::PostDelayedTask(const tracked_objects::Location& from_here,
+void FakeTaskRunner::PostDelayedTask(const base::Location& from_here,
                                      const base::Closure& task,
                                      base::TimeDelta delay) {
   queue_.emplace(std::make_pair(test_clock_->Now() + delay, ++counter_), task);

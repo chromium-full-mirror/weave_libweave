@@ -9,6 +9,7 @@
 #include <string>
 
 #include <base/json/json_writer.h>
+#include <base/location.h>
 #include <base/logging.h>
 
 #include "src/commands/object_schema.h"
@@ -18,7 +19,7 @@
 namespace weave {
 namespace {
 // Helper function to report "type mismatch" errors when parsing JSON.
-void ReportJsonTypeMismatch(const tracked_objects::Location& location,
+void ReportJsonTypeMismatch(const base::Location& location,
                             const base::Value* value_in,
                             const std::string& expected_type,
                             ErrorPtr* error) {
@@ -34,7 +35,7 @@ void ReportJsonTypeMismatch(const tracked_objects::Location& location,
 // data from the value_out parameter passed to particular overload of
 // TypedValueFromJson() function. Always returns false.
 template <typename T>
-bool ReportUnexpectedJson(const tracked_objects::Location& location,
+bool ReportUnexpectedJson(const base::Location& location,
                           const base::Value* value_in,
                           T*,
                           ErrorPtr* error) {
@@ -45,7 +46,7 @@ bool ReportUnexpectedJson(const tracked_objects::Location& location,
 }
 
 bool ErrorMissingProperty(ErrorPtr* error,
-                          const tracked_objects::Location& location,
+                          const base::Location& location,
                           const char* param_name) {
   Error::AddToPrintf(error, location, errors::commands::kDomain,
                      errors::commands::kPropertyMissing,

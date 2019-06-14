@@ -9,6 +9,7 @@
 #include <string>
 #include <utility>
 
+#include <base/location.h>
 #include <base/memory/ptr_util.h>
 #include <base/values.h>
 #include <gmock/gmock.h>
@@ -47,7 +48,7 @@ class MockDeviceDelegate : public DeviceDelegate {
   MOCK_CONST_METHOD0(GetHttpsEnpoint, IntPair());
   MOCK_CONST_METHOD0(GetUptime, base::TimeDelta());
   MOCK_CONST_METHOD0(GetHttpRequestTimeout, base::TimeDelta());
-  MOCK_METHOD3(PostDelayedTask, void(const tracked_objects::Location&,
+  MOCK_METHOD3(PostDelayedTask, void(const base::Location&,
                                      const base::Closure&,
                                      base::TimeDelta));
 

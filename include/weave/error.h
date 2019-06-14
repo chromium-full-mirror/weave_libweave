@@ -25,11 +25,11 @@ class LIBWEAVE_EXPORT Error final {
   ~Error() = default;
 
   // Creates an instance of Error class.
-  static ErrorPtr Create(const tracked_objects::Location& location,
+  static ErrorPtr Create(const base::Location& location,
                          const std::string& domain,
                          const std::string& code,
                          const std::string& message);
-  static ErrorPtr Create(const tracked_objects::Location& location,
+  static ErrorPtr Create(const base::Location& location,
                          const std::string& domain,
                          const std::string& code,
                          const std::string& message,
@@ -38,14 +38,14 @@ class LIBWEAVE_EXPORT Error final {
   // initializes it with specified arguments and adds it to the head of
   // the error chain pointed to by |error|.
   static void AddTo(ErrorPtr* error,
-                    const tracked_objects::Location& location,
+                    const base::Location& location,
                     const std::string& domain,
                     const std::string& code,
                     const std::string& message);
   // Same as the Error::AddTo above, but allows to pass in a printf-like
   // format string and optional parameters to format the error message.
   static void AddToPrintf(ErrorPtr* error,
-                          const tracked_objects::Location& location,
+                          const base::Location& location,
                           const std::string& domain,
                           const std::string& code,
                           const char* format,
@@ -98,7 +98,7 @@ class LIBWEAVE_EXPORT Error final {
  protected:
   // Constructor is protected since this object is supposed to be
   // created via the Create factory methods.
-  Error(const tracked_objects::Location& location,
+  Error(const base::Location& location,
         const std::string& domain,
         const std::string& code,
         const std::string& message,

@@ -11,8 +11,8 @@ namespace weave {
 namespace {
 
 ErrorPtr GenerateNetworkError() {
-  tracked_objects::Location loc("GenerateNetworkError", "error_unittest.cc", 15,
-                                ::tracked_objects::GetProgramCounter());
+  base::Location loc("GenerateNetworkError", "error_unittest.cc", 15,
+                     ::base::GetProgramCounter());
   return Error::Create(loc, "network", "not_found", "Resource not found");
 }
 

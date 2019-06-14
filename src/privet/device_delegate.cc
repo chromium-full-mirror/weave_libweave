@@ -38,7 +38,7 @@ class DeviceDelegateImpl : public DeviceDelegate {
     return http_request_timeout_;
   }
 
-  void PostDelayedTask(const tracked_objects::Location& from_here,
+  void PostDelayedTask(const base::Location& from_here,
                        const base::Closure& task,
                        base::TimeDelta delay) override {
     task_runner_->PostDelayedTask(from_here, task, delay);
