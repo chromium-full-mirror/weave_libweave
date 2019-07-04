@@ -17,10 +17,9 @@ inline void LogError(const base::Location& location,
   // Use logging::LogMessage() directly instead of LOG(ERROR) to substitute
   // the current error location with the location passed in to the Error object.
   // This way the log will contain the actual location of the error, and not
-  // as if it always comes from chromeos/errors/error.cc(22).
-  logging::LogMessage(location.file_name(), location.line_number(),
-                      logging::LOG_ERROR)
-          .stream()
+  // as if it always comes from brillo/errors/error.cc(22).
+  logging::LogMessage(
+      location.file_name(), location.line_number(), logging::LOG_ERROR).stream()
       << location.function_name() << "(...): "
       << "Domain=" << domain << ", Code=" << code << ", Message=" << message;
 }
@@ -96,19 +95,12 @@ Error::Error(const base::Location& location,
              const std::string& code,
              const std::string& message,
              ErrorPtr inner_error)
-    : Error{tracked_objects::LocationSnapshot{location}, domain, code, message,
-            std::move(inner_error)} {}
-
-Error::Error(const tracked_objects::LocationSnapshot& location,
-             const std::string& domain,
-             const std::string& code,
-             const std::string& message,
-             ErrorPtr inner_error)
     : domain_(domain),
       code_(code),
       message_(message),
       location_(location),
-      inner_error_(std::move(inner_error)) {}
+      inner_error_(std::move(inner_error)) {
+}
 
 const Error* Error::FindErrorOfDomain(const Error* error_chain_start,
                                       const std::string& domain) {

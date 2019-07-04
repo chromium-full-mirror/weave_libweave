@@ -9,9 +9,8 @@
 #include <string>
 
 #include <base/callback.h>
-#include <base/macros.h>
 #include <base/location.h>
-#include <base/compiler_specific.h>
+#include <base/macros.h>
 #include <weave/export.h>
 
 namespace weave {
@@ -60,7 +59,7 @@ class LIBWEAVE_EXPORT Error final {
   const std::string& GetMessage() const { return message_; }
 
   // Returns the location of the error in the source code.
-  const tracked_objects::LocationSnapshot& GetLocation() const {
+  const base::Location& GetLocation() const {
     return location_;
   }
 
@@ -104,12 +103,6 @@ class LIBWEAVE_EXPORT Error final {
         const std::string& message,
         ErrorPtr inner_error);
 
-  Error(const tracked_objects::LocationSnapshot& location,
-        const std::string& domain,
-        const std::string& code,
-        const std::string& message,
-        ErrorPtr inner_error);
-
   // Error domain. The domain defines the scopes for error codes.
   // Two errors with the same code but different domains are different errors.
   std::string domain_;
@@ -118,7 +111,8 @@ class LIBWEAVE_EXPORT Error final {
   // Human-readable error message.
   std::string message_;
   // Error origin in the source code.
-  tracked_objects::LocationSnapshot location_;
+  // TODO(crbug.com/980935): Consider dropping this.
+  base::Location location_;
   // Pointer to inner error, if any. This forms a chain of errors.
   ErrorPtr inner_error_;
 
