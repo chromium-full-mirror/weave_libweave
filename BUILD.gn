@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# TODO(oka): rename all the unittest files and enable this linting option.
+# gnlint: disable=GnLintSourceFileNames
+
 import("//common-mk/deps.gni")
 import("//common-mk/pkg_config.gni")
 
@@ -16,6 +19,11 @@ group("all") {
   }
 }
 
+default_target_deps = [
+  "expat",
+  "libcrypto",
+]
+
 pkg_config("target_defaults") {
   include_dirs = [
     ".",
@@ -23,10 +31,7 @@ pkg_config("target_defaults") {
     "./third_party/modp_b64/modp_b64/",
     "./third_party/libuweave/",
   ]
-  pkg_deps = [
-    "expat",
-    "libcrypto",
-  ]
+  pkg_deps = default_target_deps
 }
 
 static_library("libweave_common") {
@@ -83,21 +88,35 @@ static_library("libweave_common") {
     "third_party/chromium/crypto/sha2.cc",
     "third_party/modp_b64/modp_b64.cc",
   ]
-  cflags = [ "-fPIC" ]
   configs += [
+    "//common-mk:pic",
     ":target_defaults",
   ]
   pkg_deps = [ "libchrome-${libbase_ver}" ]
 }
 
-static_library("libweave-${libbase_ver}") {
-  configs += [
-    ":target_defaults",
-  ]
+libweave_pkg_deps = [ "libchrome-${libbase_ver}" ]
+
+# TODO(crbug.com/913871): refactor using generate_pkg_config .
+write_deps("libweave_deps") {
+  pkg_deps = default_target_deps + libweave_pkg_deps
+  target = "libweave-${libbase_ver}"
+}
+
+shared_library("libweave-${libbase_ver}") {
+  configs += [ ":target_defaults" ]
   deps = [
     ":libweave_common",
+    ":libweave_deps",
   ]
-  pkg_deps = [ "libchrome-${libbase_ver}" ]
+  pkg_deps = libweave_pkg_deps
+}
+
+libweave_test_pkg_deps = [ "libchrome-${libbase_ver}" ]
+
+write_deps("libweave-test_deps") {
+  pkg_deps = default_target_deps + libweave_test_pkg_deps
+  target = "libweave-test-${libbase_ver}"
 }
 
 static_library("libweave-test-${libbase_ver}") {
@@ -109,8 +128,13 @@ static_library("libweave-test-${libbase_ver}") {
   ]
   configs += [
     ":target_defaults",
+    "//common-mk:nouse_thin_archive",
   ]
-  pkg_deps = [ "libchrome-${libbase_ver}" ]
+  configs -= [ "//common-mk:use_thin_archive" ]
+  deps = [
+    ":libweave-test_deps",
+  ]
+  pkg_deps = libweave_test_pkg_deps
 }
 
 if (use.test) {
@@ -135,7 +159,7 @@ if (use.test) {
       ":target_defaults",
     ]
     deps = [
-      ":libweave-test-<(libbase_ver)",
+      ":libweave-test-${libbase_ver}",
       ":libweave_common",
     ]
     pkg_deps = [ "libchrome-${libbase_ver}" ]
