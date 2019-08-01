@@ -2,9 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# TODO(oka): rename all the unittest files and enable this linting option.
-# gnlint: disable=GnLintSourceFileNames
-
 import("//common-mk/deps.gni")
 import("//common-mk/pkg_config.gni")
 
@@ -140,19 +137,19 @@ static_library("libweave-test-${libbase_ver}") {
 if (use.test) {
   executable("libweave_testrunner") {
     sources = [
-      "src/backoff_entry_unittest.cc",
-      "src/base_api_handler_unittest.cc",
-      "src/config_unittest.cc",
-      "src/data_encoding_unittest.cc",
-      "src/device_registration_info_unittest.cc",
-      "src/error_unittest.cc",
-      "src/streams_unittest.cc",
-      "src/string_utils_unittest.cc",
+      "src/backoff_entry_test.cc",
+      "src/base_api_handler_test.cc",
+      "src/config_test.cc",
+      "src/data_encoding_test.cc",
+      "src/device_registration_info_test.cc",
+      "src/error_test.cc",
+      "src/streams_test.cc",
+      "src/string_utils_test.cc",
       "src/test/weave_testrunner.cc",
-      "src/weave_unittest.cc",
-      "third_party/chromium/crypto/p224_spake_unittest.cc",
-      "third_party/chromium/crypto/p224_unittest.cc",
-      "third_party/chromium/crypto/sha2_unittest.cc",
+      "src/weave_test.cc",
+      "third_party/chromium/crypto/p224_spake_test.cc",
+      "third_party/chromium/crypto/p224_test.cc",
+      "third_party/chromium/crypto/sha2_test.cc",
     ]
     configs += [
       "//common-mk:test",
