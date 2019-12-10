@@ -10,7 +10,7 @@ namespace test {
 
 class FakeTaskRunner::TestClock : public base::Clock {
  public:
-  base::Time Now() override { return now_; }
+  base::Time Now() const override { return now_; }
 
   void SetNow(base::Time now) { now_ = now; }
 
