@@ -473,9 +473,10 @@ std::unique_ptr<base::Value> ObjectPropType::ToJson(bool full_schema,
 
     dict->SetWithoutPathExpansion(commands::attributes::kObject_Properties,
                                   std::move(object_schema));
-    dict->SetBooleanWithoutPathExpansion(
+    dict->SetWithoutPathExpansion(
         commands::attributes::kObject_AdditionalProperties,
-        object_schema_.value->GetExtraPropertiesAllowed());
+        std::make_unique<base::Value>(
+            object_schema_.value->GetExtraPropertiesAllowed()));
     std::unique_ptr<base::ListValue> required{new base::ListValue};
     for (const auto& pair : object_schema_.value->GetProps()) {
       if (pair.second->IsRequired())

@@ -40,7 +40,7 @@ void CloudCommandProxy::OnErrorChanged() {
   patch->Set(commands::attributes::kCommand_Error,
              command_instance_->GetError()
                  ? ErrorInfoToJson(*command_instance_->GetError())
-                 : base::Value::CreateNullValue());
+                 : std::make_unique<base::Value>());
   QueueCommandUpdate(std::move(patch));
 }
 

@@ -214,12 +214,12 @@ std::unique_ptr<base::DictionaryValue> CommandDictionary::GetCommandsAsJson(
       // If this is the first time we encounter this package, create a JSON
       // object for it.
       dict->SetWithoutPathExpansion(package_name,
-                                    base::MakeUnique<base::DictionaryValue>());
+                                    std::make_unique<base::DictionaryValue>());
       bool got_package =
           dict->GetDictionaryWithoutPathExpansion(package_name, &package);
       DCHECK(got_package);
     }
-    auto command_def = base::MakeUnique<base::DictionaryValue>();
+    auto command_def = std::make_unique<base::DictionaryValue>();
     command_def->Set(commands::attributes::kCommand_Parameters,
                      std::move(parameters));
     command_def->SetString(commands::attributes::kCommand_Role,

@@ -44,8 +44,8 @@ const int kPairingBlockingTimeMinutes = 1;
 // Returns "scope:id:time".
 std::string CreateTokenData(const UserInfo& user_info, const base::Time& time) {
   return base::IntToString(static_cast<int>(user_info.scope())) +
-         kTokenDelimeter + base::Uint64ToString(user_info.user_id()) +
-         kTokenDelimeter + base::Int64ToString(time.ToTimeT());
+         kTokenDelimeter + base::NumberToString(user_info.user_id()) +
+         kTokenDelimeter + base::NumberToString((int64_t)time.ToTimeT());
 }
 
 // Splits string of "scope:id:time" format.

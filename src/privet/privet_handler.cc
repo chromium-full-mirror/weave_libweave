@@ -733,7 +733,7 @@ void PrivetHandler::ReplyWithSetupStatus(
 
   const SetupState& state = cloud_->GetSetupState();
   if (!state.IsStatusEqual(SetupState::kNone)) {
-    auto gcd = base::MakeUnique<base::DictionaryValue>();
+    auto gcd = std::make_unique<base::DictionaryValue>();
     SetStateProperties(state, gcd.get());
     if (state.IsStatusEqual(SetupState::kSuccess))
       gcd->SetString(kInfoIdKey, cloud_->GetCloudId());
@@ -744,7 +744,7 @@ void PrivetHandler::ReplyWithSetupStatus(
   if (wifi_) {
     const SetupState& state = wifi_->GetSetupState();
     if (!state.IsStatusEqual(SetupState::kNone)) {
-      auto wifi = base::MakeUnique<base::DictionaryValue>();
+      auto wifi = std::make_unique<base::DictionaryValue>();
       SetStateProperties(state, wifi.get());
       if (state.IsStatusEqual(SetupState::kSuccess))
         wifi->SetString(kInfoWifiSsidKey, wifi_->GetCurrentlyConnectedSsid());

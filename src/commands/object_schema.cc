@@ -86,7 +86,7 @@ std::string DetectArrayType(const base::ListValue* list,
   } else if (list->GetSize() > 0) {
     const base::Value* first_element = nullptr;
     if (list->Get(0, &first_element)) {
-      switch (first_element->GetType()) {
+      switch (first_element->type()) {
         case base::Value::Type::BOOLEAN:
           type_name = PropType::GetTypeStringFromType(ValueType::Boolean);
           break;
@@ -178,10 +178,10 @@ std::string DetectObjectType(const base::DictionaryValue* dict,
   // it's a Double.
   const base::Value* value = nullptr;
   if (dict->Get(commands::attributes::kNumeric_Min, &value) &&
-      value->IsType(base::Value::Type::DOUBLE))
+      value->is_double())
     return PropType::GetTypeStringFromType(ValueType::Double);
   if (dict->Get(commands::attributes::kNumeric_Max, &value) &&
-      value->IsType(base::Value::Type::DOUBLE))
+      value->is_double())
     return PropType::GetTypeStringFromType(ValueType::Double);
 
   // If we have "minimum" or "maximum", it's an Integer.
@@ -209,15 +209,15 @@ std::string DetectObjectType(const base::DictionaryValue* dict,
 
   // If we have "default", try to use it for type detection.
   if (dict->Get(commands::attributes::kDefault, &value)) {
-    if (value->IsType(base::Value::Type::DOUBLE))
+    if (value->is_double())
       return PropType::GetTypeStringFromType(ValueType::Double);
-    if (value->IsType(base::Value::Type::INTEGER))
+    if (value->is_int())
       return PropType::GetTypeStringFromType(ValueType::Int);
-    if (value->IsType(base::Value::Type::BOOLEAN))
+    if (value->is_bool())
       return PropType::GetTypeStringFromType(ValueType::Boolean);
-    if (value->IsType(base::Value::Type::STRING))
+    if (value->is_string())
       return PropType::GetTypeStringFromType(ValueType::String);
-    if (value->IsType(base::Value::Type::LIST)) {
+    if (value->is_list()) {
       CHECK(value->GetAsList(&list)) << "List value expected";
       std::string child_type = DetectArrayType(list, base_schema, false);
       if (!child_type.empty()) {
@@ -354,21 +354,21 @@ std::unique_ptr<PropType> ObjectSchema::PropFromJson(
     const base::Value& value,
     const PropType* base_schema,
     ErrorPtr* error) {
-  if (value.IsType(base::Value::Type::STRING)) {
+  if (value.is_string()) {
     // A string value is a short-hand object specification and provides
     // the parameter type.
     return PropFromJsonString(value, base_schema, error);
-  } else if (value.IsType(base::Value::Type::LIST)) {
+  } else if (value.is_list()) {
     // One of the enumerated types.
     return PropFromJsonArray(value, base_schema, error);
-  } else if (value.IsType(base::Value::Type::DICTIONARY)) {
+  } else if (value.is_dict()) {
     // Full parameter definition.
     return PropFromJsonObject(value, base_schema, error);
   }
   Error::AddToPrintf(error, FROM_HERE, errors::commands::kDomain,
                      errors::commands::kUnknownType,
                      "Unexpected JSON value type: %s",
-                     EnumToString(value.GetType()).c_str());
+                     EnumToString(value.type()).c_str());
   return nullptr;
 }
 
