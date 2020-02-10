@@ -210,7 +210,7 @@ bool TypedValueFromJson(const base::Value* value_in,
   // Clear them first before proceeding.
   value_out->clear();
   value_out->reserve(list->GetSize());
-  for (const base::Value& item : base::ValueReferenceAdapter(*list)) {
+  for (const base::Value& item : *list) {
     std::unique_ptr<PropValue> prop_value =
         item_type->CreatePropValue(item, error);
     if (!prop_value)

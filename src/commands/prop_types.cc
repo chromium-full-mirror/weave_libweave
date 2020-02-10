@@ -544,8 +544,7 @@ bool ObjectPropType::ObjectSchemaFromJson(const base::DictionaryValue* value,
                          commands::attributes::kObject_Required);
       return false;
     }
-    for (const base::Value& value :
-             base::ValueReferenceAdapter(*required_list)) {
+    for (const base::Value& value : *required_list) {
       std::string name;
       if (!value.GetAsString(&name)) {
         std::string json_value;
