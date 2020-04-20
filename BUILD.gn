@@ -128,9 +128,7 @@ static_library("libweave-test-${libbase_ver}") {
     "//common-mk:nouse_thin_archive",
   ]
   configs -= [ "//common-mk:use_thin_archive" ]
-  deps = [
-    ":libweave-test_deps",
-  ]
+  deps = [ ":libweave-test_deps" ]
   pkg_deps = libweave_test_pkg_deps
 }
 
