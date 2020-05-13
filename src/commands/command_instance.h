@@ -12,6 +12,7 @@
 
 #include <base/macros.h>
 #include <base/observer_list.h>
+#include <base/observer_list_types.h>
 #include <weave/error.h>
 #include <weave/command.h>
 
@@ -31,7 +32,7 @@ class CommandQueue;
 
 class CommandInstance final : public Command {
  public:
-  class Observer {
+  class Observer : public base::CheckedObserver {
    public:
     virtual void OnCommandDestroyed() = 0;
     virtual void OnErrorChanged() = 0;

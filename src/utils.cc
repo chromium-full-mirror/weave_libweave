@@ -40,7 +40,8 @@ std::unique_ptr<base::DictionaryValue> LoadJsonDict(
     ErrorPtr* error) {
   std::unique_ptr<base::DictionaryValue> result;
   std::string error_message;
-  auto value = base::JSONReader::ReadAndReturnError(
+  // TODO(crbug/1066447): migrate to new ReadAndReturnError API after uprev.
+  auto value = base::JSONReader::ReadAndReturnErrorDeprecated(
       json_string, base::JSON_PARSE_RFC, nullptr, &error_message);
   if (!value) {
     Error::AddToPrintf(error, FROM_HERE, errors::json::kDomain,

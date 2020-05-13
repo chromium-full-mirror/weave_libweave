@@ -12,6 +12,7 @@
 #include <base/callback.h>
 #include <base/memory/ref_counted.h>
 #include <base/observer_list.h>
+#include <base/observer_list_types.h>
 
 #include "src/privet/privet_types.h"
 #include "src/privet/security_delegate.h"
@@ -43,7 +44,7 @@ class CloudDelegate {
       base::Callback<void(const base::DictionaryValue& commands,
                           ErrorPtr error)>;
 
-  class Observer {
+  class Observer : public base::CheckedObserver {
    public:
     virtual ~Observer() = default;
 

@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "base/macros.h"
+#include "base/stl_util.h"
 #include <gtest/gtest.h>
 
 namespace crypto {
@@ -785,7 +785,7 @@ TEST(P224, ExternalToInternalAndBack) {
 TEST(P224, ScalarBaseMult) {
   Point point;
 
-  for (size_t i = 0; i < arraysize(kNISTTestVectors); i++) {
+  for (size_t i = 0; i < base::size(kNISTTestVectors); i++) {
     p224::ScalarBaseMult(kNISTTestVectors[i].scalar, &point);
     const std::string external = point.ToString();
     ASSERT_EQ(external.size(), 56u);

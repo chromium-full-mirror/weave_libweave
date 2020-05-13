@@ -211,8 +211,9 @@ std::unique_ptr<base::DictionaryValue> ParseJsonResponse(
 
   const std::string& json = response.GetData();
   std::string error_message;
-  auto value = base::JSONReader::ReadAndReturnError(json, base::JSON_PARSE_RFC,
-                                                    nullptr, &error_message);
+  // TODO(crbug/1066447): migrate to new ReadAndReturnError API after uprev.
+  auto value = base::JSONReader::ReadAndReturnErrorDeprecated(
+      json, base::JSON_PARSE_RFC, nullptr, &error_message);
   if (!value) {
     Error::AddToPrintf(error, FROM_HERE, errors::json::kDomain,
                        errors::json::kParseError,

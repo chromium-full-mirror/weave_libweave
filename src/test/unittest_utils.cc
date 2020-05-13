@@ -19,9 +19,10 @@ std::unique_ptr<base::Value> CreateValue(const std::string& json) {
   std::replace(json2.begin(), json2.end(), '\'', '"');
   int error = 0;
   std::string message;
+  // TODO(crbug/1066447): migrate to new ReadAndReturnError API after uprev.
   std::unique_ptr<base::Value> value{
-      base::JSONReader::ReadAndReturnError(json2, base::JSON_PARSE_RFC, &error,
-                                           &message)
+      base::JSONReader::ReadAndReturnErrorDeprecated(
+          json2, base::JSON_PARSE_RFC, &error, &message)
           .release()};
   CHECK(value) << "Failed to load JSON: " << message << ", " << json;
   return value;

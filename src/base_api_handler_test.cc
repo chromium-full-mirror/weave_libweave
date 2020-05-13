@@ -76,7 +76,7 @@ class BaseApiHandlerTest : public ::testing::Test {
         nullptr, nullptr);
     EXPECT_TRUE(!!command_instance);
 
-    std::string id{base::IntToString(++command_id_)};
+    std::string id{base::NumberToString(++command_id_)};
     command_instance->SetID(id);
     command_manager_->AddCommand(std::move(command_instance));
     EXPECT_EQ(Command::State::kDone,
