@@ -9,6 +9,7 @@
 #include <base/json/json_reader.h>
 #include <base/json/json_writer.h>
 #include <base/logging.h>
+#include <base/values.h>
 
 namespace weave {
 namespace test {
@@ -17,15 +18,11 @@ std::unique_ptr<base::Value> CreateValue(const std::string& json) {
   std::string json2(json);
   // Convert apostrophes to double-quotes so JSONReader can parse the string.
   std::replace(json2.begin(), json2.end(), '\'', '"');
-  int error = 0;
-  std::string message;
-  // TODO(crbug/1066447): migrate to new ReadAndReturnError API after uprev.
-  std::unique_ptr<base::Value> value{
-      base::JSONReader::ReadAndReturnErrorDeprecated(
-          json2, base::JSON_PARSE_RFC, &error, &message)
-          .release()};
-  CHECK(value) << "Failed to load JSON: " << message << ", " << json;
-  return value;
+  auto result = base::JSONReader::ReadAndReturnValueWithError(
+      json2, base::JSON_PARSE_RFC);
+  CHECK(result.value) << "Failed to load JSON: " << result.error_message << ", "
+                      << json;
+  return base::Value::ToUniquePtrValue(std::move(*result.value));
 }
 
 std::string ValueToString(const base::Value& value) {

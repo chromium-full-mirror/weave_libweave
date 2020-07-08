@@ -4,6 +4,8 @@
 
 #include "src/utils.h"
 
+#include <utility>
+
 #include <base/bind_helpers.h>
 #include <base/json/json_reader.h>
 
@@ -38,32 +40,25 @@ const char kInvalidPackageError[] = "invalid_package";
 std::unique_ptr<base::DictionaryValue> LoadJsonDict(
     const std::string& json_string,
     ErrorPtr* error) {
-  std::unique_ptr<base::DictionaryValue> result;
-  std::string error_message;
-  // TODO(crbug/1066447): migrate to new ReadAndReturnError API after uprev.
-  auto value = base::JSONReader::ReadAndReturnErrorDeprecated(
-      json_string, base::JSON_PARSE_RFC, nullptr, &error_message);
-  if (!value) {
+  auto result = base::JSONReader::ReadAndReturnValueWithError(
+      json_string, base::JSON_PARSE_RFC);
+  if (!result.value) {
     Error::AddToPrintf(error, FROM_HERE, errors::json::kDomain,
                        errors::json::kParseError,
                        "Error parsing JSON string '%s' (%zu): %s",
                        LimitString(json_string, kMaxStrLen).c_str(),
-                       json_string.size(), error_message.c_str());
-    return result;
+                       json_string.size(), result.error_message.c_str());
+    return std::make_unique<base::DictionaryValue>();
   }
   base::DictionaryValue* dict_value = nullptr;
-  if (!value->GetAsDictionary(&dict_value)) {
+  if (!result.value->GetAsDictionary(&dict_value)) {
     Error::AddToPrintf(error, FROM_HERE, errors::json::kDomain,
                        errors::json::kObjectExpected,
                        "JSON string '%s' is not a JSON object",
                        LimitString(json_string, kMaxStrLen).c_str());
-    return result;
-  } else {
-    // |value| is now owned by |dict_value|.
-    base::IgnoreResult(value.release());
+    return std::make_unique<base::DictionaryValue>();
   }
-  result.reset(dict_value);
-  return result;
+  return std::make_unique<base::DictionaryValue>(std::move(*dict_value));
 }
 
 std::unique_ptr<base::DictionaryValue> ErrorInfoToJson(const Error& error) {

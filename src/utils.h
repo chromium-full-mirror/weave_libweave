@@ -26,10 +26,12 @@ extern const char kInvalidPackageError[];
 const char kDefaultCategory[] = "";
 
 // Helper function to load a JSON dictionary from a string.
+// TODO(crbug.com/1099111): change base::{Dictioanry,List}Value to base::Value
 std::unique_ptr<base::DictionaryValue> LoadJsonDict(
     const std::string& json_string,
     ErrorPtr* error);
 
+// TODO(crbug.com/1099111): change base::{Dictioanry,List}Value to base::Value
 std::unique_ptr<base::DictionaryValue> ErrorInfoToJson(const Error& error);
 
 }  // namespace weave

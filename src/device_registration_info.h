@@ -50,6 +50,8 @@ extern const char kErrorDomainGCDServer[];
 class DeviceRegistrationInfo : public NotificationDelegate,
                                public CloudCommandUpdateInterface {
  public:
+  // TODO(crbug.com/1099111): change base::{Dictioanry,List}Value to
+  // base::Value.
   using CloudRequestDoneCallback =
       base::Callback<void(const base::DictionaryValue& response,
                           ErrorPtr error)>;
@@ -113,6 +115,8 @@ class DeviceRegistrationInfo : public NotificationDelegate,
   void SwitchXmppChannel(const std::string& channel);
 
   // Updates a command (override from CloudCommandUpdateInterface).
+  // TODO(crbug.com/1099111): change base::{Dictioanry,List}Value to
+  // base::Value.
   void UpdateCommand(const std::string& command_id,
                      const base::DictionaryValue& command_patch,
                      const DoneCallback& callback) override;
@@ -158,6 +162,8 @@ class DeviceRegistrationInfo : public NotificationDelegate,
 
   // Parse the OAuth response, and sets registration status to
   // kInvalidCredentials if our registration is no longer valid.
+  // TODO(crbug.com/1099111): change base::{Dictioanry,List}Value to
+  // base::Value.
   std::unique_ptr<base::DictionaryValue> ParseOAuthResponse(
       const provider::HttpClient::Response& response,
       ErrorPtr* error);
@@ -171,6 +177,8 @@ class DeviceRegistrationInfo : public NotificationDelegate,
   // and device removal.  It is a recommended way to do cloud API
   // requests.
   // TODO(antonm): Consider moving into some other class.
+  // TODO(crbug.com/1099111): change base::{Dictioanry,List}Value to
+  // base::Value.
   void DoCloudRequest(provider::HttpClient::Method method,
                       const std::string& url,
                       const base::DictionaryValue* body,
@@ -196,12 +204,16 @@ class DeviceRegistrationInfo : public NotificationDelegate,
 
   void UpdateDeviceResource(const DoneCallback& callback);
   void StartQueuedUpdateDeviceResource();
+  // TODO(crbug.com/1099111): change base::{Dictioanry,List}Value to
+  // base::Value.
   void OnUpdateDeviceResourceDone(const base::DictionaryValue& device_info,
                                   ErrorPtr error);
   void OnUpdateDeviceResourceError(ErrorPtr error);
 
   // Callback from GetDeviceInfo() to retrieve the device resource timestamp
   // and retry UpdateDeviceResource() call.
+  // TODO(crbug.com/1099111): change base::{Dictioanry,List}Value to
+  // base::Value.
   void OnDeviceInfoRetrieved(const base::DictionaryValue& device_info,
                              ErrorPtr error);
 
@@ -209,11 +221,17 @@ class DeviceRegistrationInfo : public NotificationDelegate,
   // |last_device_resource_updated_timestamp_|.
   // Returns false if the "lastUpdateTimeMs" field is not found in the device
   // resource or it is invalid.
+  // TODO(crbug.com/1099111): change base::{Dictioanry,List}Value to
+  // base::Value.
   bool UpdateDeviceInfoTimestamp(const base::DictionaryValue& device_info);
 
+  // TODO(crbug.com/1099111): change base::{Dictioanry,List}Value to
+  // base::Value.
   void FetchCommands(
       const base::Callback<void(const base::ListValue&, ErrorPtr)>& callback,
       const std::string& reason);
+  // TODO(crbug.com/1099111): change base::{Dictioanry,List}Value to
+  // base::Value.
   void OnFetchCommandsDone(
       const base::Callback<void(const base::ListValue&, ErrorPtr)>& callback,
       const base::DictionaryValue& json,
@@ -225,10 +243,16 @@ class DeviceRegistrationInfo : public NotificationDelegate,
   // Processes the command list that is fetched from the server on connection.
   // Aborts commands which are in transitional states and publishes queued
   // commands which are queued.
+  // TODO(crbug.com/1099111): change base::{Dictioanry,List}Value to
+  // base::Value.
   void ProcessInitialCommandList(const base::ListValue& commands,
                                  ErrorPtr error);
 
+  // TODO(crbug.com/1099111): change base::{Dictioanry,List}Value to
+  // base::Value.
   void PublishCommands(const base::ListValue& commands, ErrorPtr error);
+  // TODO(crbug.com/1099111): change base::{Dictioanry,List}Value to
+  // base::Value.
   void PublishCommand(const base::DictionaryValue& command);
 
   // Helper function to pull the pending command list from the server using
@@ -238,6 +262,8 @@ class DeviceRegistrationInfo : public NotificationDelegate,
   void FetchAndPublishCommands(const std::string& reason);
 
   void PublishStateUpdates();
+  // TODO(crbug.com/1099111): change base::{Dictioanry,List}Value to
+  // base::Value.
   void OnPublishStateDone(StateChangeQueueInterface::UpdateID update_id,
                           const base::DictionaryValue& reply,
                           ErrorPtr error);
@@ -250,6 +276,8 @@ class DeviceRegistrationInfo : public NotificationDelegate,
   // Builds Cloud API devices collection REST resource which matches
   // current state of the device including command definitions
   // for all supported commands and current device state.
+  // TODO(crbug.com/1099111): change base::{Dictioanry,List}Value to
+  // base::Value.
   std::unique_ptr<base::DictionaryValue> BuildDeviceResource(ErrorPtr* error);
 
   void SetGcdState(GcdState new_state);
@@ -266,6 +294,8 @@ class DeviceRegistrationInfo : public NotificationDelegate,
   void OnConnected(const std::string& channel_name) override;
   void OnDisconnected() override;
   void OnPermanentFailure() override;
+  // TODO(crbug.com/1099111): change base::{Dictioanry,List}Value to
+  // base::Value.
   void OnCommandCreated(const base::DictionaryValue& command,
                         const std::string& channel_name) override;
   void OnDeviceDeleted(const std::string& cloud_id) override;

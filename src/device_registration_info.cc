@@ -61,6 +61,7 @@ inline void SetUnexpectedError(ErrorPtr* error) {
                "Unexpected GCD error");
 }
 
+// TODO(crbug.com/1099111): change base::{Dictioanry,List}Value to base::Value.
 void ParseGCDError(const base::DictionaryValue* json, ErrorPtr* error) {
   const base::Value* list_value = nullptr;
   const base::ListValue* error_list = nullptr;
@@ -194,6 +195,7 @@ class RequestSender final {
   DISALLOW_COPY_AND_ASSIGN(RequestSender);
 };
 
+// TODO(crbug.com/1099111): change return type to base::Value.
 std::unique_ptr<base::DictionaryValue> ParseJsonResponse(
     const HttpClient::Response& response,
     ErrorPtr* error) {
@@ -210,28 +212,23 @@ std::unique_ptr<base::DictionaryValue> ParseJsonResponse(
   }
 
   const std::string& json = response.GetData();
-  std::string error_message;
-  // TODO(crbug/1066447): migrate to new ReadAndReturnError API after uprev.
-  auto value = base::JSONReader::ReadAndReturnErrorDeprecated(
-      json, base::JSON_PARSE_RFC, nullptr, &error_message);
-  if (!value) {
+  auto result =
+      base::JSONReader::ReadAndReturnValueWithError(json, base::JSON_PARSE_RFC);
+  if (!result.value) {
     Error::AddToPrintf(error, FROM_HERE, errors::json::kDomain,
                        errors::json::kParseError,
                        "Error '%s' occurred parsing JSON string '%s'",
-                       error_message.c_str(), json.c_str());
+                       result.error_message.c_str(), json.c_str());
     return std::unique_ptr<base::DictionaryValue>();
   }
   base::DictionaryValue* dict_value = nullptr;
-  if (!value->GetAsDictionary(&dict_value)) {
+  if (!result.value->GetAsDictionary(&dict_value)) {
     Error::AddToPrintf(
         error, FROM_HERE, errors::json::kDomain, errors::json::kObjectExpected,
         "Response is not a valid JSON object: '%s'", json.c_str());
     return std::unique_ptr<base::DictionaryValue>();
-  } else {
-    // |value| is now owned by |dict_value|, so release the unique_ptr now.
-    base::IgnoreResult(value.release());
   }
-  return std::unique_ptr<base::DictionaryValue>(dict_value);
+  return std::make_unique<base::DictionaryValue>(std::move(*dict_value));
 }
 
 bool IsSuccessful(const HttpClient::Response& response) {
@@ -490,6 +487,7 @@ void DeviceRegistrationInfo::AddGcdStateChangedCallback(
   callback.Run(gcd_state_);
 }
 
+// TODO(crbug.com/1099111): change return type to base::Value.
 std::unique_ptr<base::DictionaryValue>
 DeviceRegistrationInfo::BuildDeviceResource(ErrorPtr* error) {
   // Limit only to commands that are visible to the cloud.
