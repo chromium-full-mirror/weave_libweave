@@ -89,10 +89,10 @@ static_library("libweave_common") {
     "//common-mk:pic",
     ":target_defaults",
   ]
-  pkg_deps = [ "libchrome-${libbase_ver}" ]
+  pkg_deps = [ "libchrome" ]
 }
 
-libweave_pkg_deps = [ "libchrome-${libbase_ver}" ]
+libweave_pkg_deps = [ "libchrome" ]
 
 # TODO(crbug.com/913871): refactor using generate_pkg_config .
 write_deps("libweave_deps") {
@@ -109,7 +109,7 @@ shared_library("libweave-${libbase_ver}") {
   pkg_deps = libweave_pkg_deps
 }
 
-libweave_test_pkg_deps = [ "libchrome-${libbase_ver}" ]
+libweave_test_pkg_deps = [ "libchrome" ]
 
 write_deps("libweave-test_deps") {
   pkg_deps = default_target_deps + libweave_test_pkg_deps
@@ -157,6 +157,6 @@ if (use.test) {
       ":libweave-test-${libbase_ver}",
       ":libweave_common",
     ]
-    pkg_deps = [ "libchrome-${libbase_ver}" ]
+    pkg_deps = [ "libchrome" ]
   }
 }
