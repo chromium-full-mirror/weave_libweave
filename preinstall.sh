@@ -9,15 +9,15 @@ OUT=$1
 v=$2
 DIR=$(cd -P -- "$(dirname -- "$0")" && pwd -P)
 
-deps=$(<"${OUT}"/gen/libweave-${v}-deps.txt)
+deps=$(<"${OUT}"/gen/libweave-deps.txt)
 sed \
   -e "s/@BSLOT@/${v}/g" \
   -e "s/@PRIVATE_PC@/${deps}/g" \
-  "${DIR}/libweave.pc.in" > "${OUT}/lib/libweave-${v}.pc"
+  "${DIR}/libweave.pc.in" > "${OUT}/lib/libweave.pc"
 
 
-deps_test=$(<"${OUT}"/gen/libweave-test-${v}-deps.txt)
+deps_test=$(<"${OUT}"/gen/libweave-test-deps.txt)
 sed \
   -e "s/@BSLOT@/${v}/g" \
   -e "s/@PRIVATE_PC@/${deps_test}/g" \
-  "${DIR}/libweave-test.pc.in" > "${OUT}/lib/libweave-test-${v}.pc"
+  "${DIR}/libweave-test.pc.in" > "${OUT}/lib/libweave-test.pc"

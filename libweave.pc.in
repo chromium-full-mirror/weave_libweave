@@ -4,4 +4,4 @@ Name: libweave
 Description: Weave device library
 Version: ${bslot}
 Requires.private: @PRIVATE_PC@
-Libs: -lweave-${bslot}
+Libs: -lweave

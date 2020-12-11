@@ -7,8 +7,8 @@ import("//common-mk/pkg_config.gni")
 
 group("all") {
   deps = [
-    ":libweave-${libbase_ver}",
-    ":libweave-test-${libbase_ver}",
+    ":libweave",
+    ":libweave-test",
     ":libweave_common",
   ]
   if (use.test) {
@@ -97,10 +97,10 @@ libweave_pkg_deps = [ "libchrome" ]
 # TODO(crbug.com/913871): refactor using generate_pkg_config .
 write_deps("libweave_deps") {
   pkg_deps = default_target_deps + libweave_pkg_deps
-  target = "libweave-${libbase_ver}"
+  target = "libweave"
 }
 
-shared_library("libweave-${libbase_ver}") {
+shared_library("libweave") {
   configs += [ ":target_defaults" ]
   deps = [
     ":libweave_common",
@@ -113,10 +113,10 @@ libweave_test_pkg_deps = [ "libchrome" ]
 
 write_deps("libweave-test_deps") {
   pkg_deps = default_target_deps + libweave_test_pkg_deps
-  target = "libweave-test-${libbase_ver}"
+  target = "libweave-test"
 }
 
-static_library("libweave-test-${libbase_ver}") {
+static_library("libweave-test") {
   sources = [
     "src/test/fake_stream.cc",
     "src/test/fake_task_runner.cc",
@@ -154,7 +154,7 @@ if (use.test) {
       ":target_defaults",
     ]
     deps = [
-      ":libweave-test-${libbase_ver}",
+      ":libweave-test",
       ":libweave_common",
     ]
     pkg_deps = [ "libchrome" ]
