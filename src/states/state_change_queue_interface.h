@@ -30,8 +30,12 @@ struct StateChange {
 class StateChangeQueueInterface {
  public:
   using UpdateID = uint64_t;
+#if BASE_VER < 860220
   using Token =
       std::unique_ptr<base::CallbackList<void(UpdateID)>::Subscription>;
+#else
+  using Token = base::CallbackListSubscription;
+#endif
 
   // Returns true if the state change notification queue is empty.
   virtual bool IsEmpty() const = 0;
