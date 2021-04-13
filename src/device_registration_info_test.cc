@@ -21,6 +21,7 @@
 
 using testing::_;
 using testing::AtLeast;
+using testing::ByMove;
 using testing::Invoke;
 using testing::InvokeWithoutArgs;
 using testing::Mock;
@@ -117,8 +118,8 @@ class DeviceRegistrationInfoTest : public ::testing::Test {
   void SetUp() override {
     EXPECT_CALL(mock_state_change_queue_, GetLastStateChangeId())
         .WillRepeatedly(Return(0));
-    EXPECT_CALL(mock_state_change_queue_, MockAddOnStateUpdatedCallback(_))
-        .WillRepeatedly(Return(nullptr));
+    EXPECT_CALL(mock_state_change_queue_, AddOnStateUpdatedCallback(_))
+        .WillRepeatedly(Return(ByMove(StateChangeQueueInterface::Token())));
 
     command_manager_ = std::make_shared<CommandManager>();
     state_manager_ = std::make_shared<StateManager>(&mock_state_change_queue_);
