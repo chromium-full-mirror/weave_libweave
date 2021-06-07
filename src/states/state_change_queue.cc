@@ -52,11 +52,7 @@ StateChangeQueueInterface::Token StateChangeQueue::AddOnStateUpdatedCallback(
     const base::Callback<void(UpdateID)>& callback) {
   if (state_changes_.empty())
     callback.Run(last_change_id_);
-#if BASE_VER < 860220
-  return Token{callbacks_.Add(callback).release()};
-#else
   return Token{callbacks_.Add(callback)};
-#endif
 }
 
 void StateChangeQueue::NotifyStateUpdatedOnServer(UpdateID update_id) {

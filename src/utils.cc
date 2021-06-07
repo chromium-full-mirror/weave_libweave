@@ -6,11 +6,7 @@
 
 #include <utility>
 
-#if BASE_VER < 860220
-#include <base/bind_helpers.h>
-#else
 #include <base/callback_helpers.h>
-#endif
 #include <base/json/json_reader.h>
 
 #include "src/json_error_codes.h"
