@@ -8,6 +8,7 @@
 #include "third_party/chromium/crypto/p224_spake.h"
 
 #include <algorithm>
+#include <string>
 
 #include <base/check_op.h>
 #include <base/logging.h>
@@ -212,11 +213,11 @@ P224EncryptedKeyExchange::Result P224EncryptedKeyExchange::ProcessMessage(
 
   std::string client_masked_dh, server_masked_dh;
   if (is_server_) {
-    client_masked_dh = message.as_string();
+    client_masked_dh = std::string(message);
     server_masked_dh = next_message_;
   } else {
     client_masked_dh = next_message_;
-    server_masked_dh = message.as_string();
+    server_masked_dh = std::string(message);
   }
 
   // Now we calculate the hashes that each side will use to prove to the other

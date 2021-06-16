@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <base/macros.h>
+#include <base/callback_list.h>
 
 #include "src/states/state_change_queue_interface.h"
 
@@ -44,7 +45,7 @@ class StateChangeQueue : public StateChangeQueueInterface {
   UpdateID last_change_id_{0};
 
   // Callback list for state change queue even sinks.
-  base::CallbackList<void(UpdateID)> callbacks_;
+  base::RepeatingCallbackList<void(UpdateID)> callbacks_;
 };
 
 }  // namespace weave
