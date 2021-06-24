@@ -5,6 +5,7 @@
 #include "src/notification/pull_channel.h"
 
 #include <base/bind.h>
+#include <base/check.h>
 #include <base/location.h>
 #include <weave/provider/task_runner.h>
 

@@ -7,6 +7,7 @@
 
 #include <string>
 
+#include <base/check.h>
 #include <base/logging.h>
 #include <weave/error.h>
 #include <weave/settings.h>

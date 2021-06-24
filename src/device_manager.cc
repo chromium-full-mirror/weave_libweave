@@ -7,6 +7,7 @@
 #include <string>
 
 #include <base/bind.h>
+#include <base/check.h>
 
 #include "src/base_api_handler.h"
 #include "src/commands/command_manager.h"

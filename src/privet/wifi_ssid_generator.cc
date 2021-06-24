@@ -7,6 +7,8 @@
 #include <bitset>
 
 #include <base/bind.h>
+#include <base/check.h>
+#include <base/check_op.h>
 #include <base/rand_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>

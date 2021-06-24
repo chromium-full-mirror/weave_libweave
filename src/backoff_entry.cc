@@ -8,6 +8,7 @@
 #include <cmath>
 #include <limits>
 
+#include <base/check.h>
 #include <base/logging.h>
 #include <base/rand_util.h>
 

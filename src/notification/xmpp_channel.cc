@@ -7,6 +7,7 @@
 #include <string>
 
 #include <base/bind.h>
+#include <base/check.h>
 #include <weave/provider/network.h>
 #include <weave/provider/task_runner.h>
 

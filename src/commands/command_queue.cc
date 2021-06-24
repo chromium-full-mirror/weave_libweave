@@ -5,6 +5,7 @@
 #include "src/commands/command_queue.h"
 
 #include <base/bind.h>
+#include <base/check.h>
 #include <base/time/time.h>
 
 namespace weave {

@@ -5,6 +5,8 @@
 #include "src/privet/security_manager.h"
 
 #include <base/bind.h>
+#include <base/check.h>
+#include <base/check_op.h>
 #include <base/compiler_specific.h>
 #include <base/guid.h>
 #include <base/logging.h>

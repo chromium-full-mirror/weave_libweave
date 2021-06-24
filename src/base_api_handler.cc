@@ -5,6 +5,7 @@
 #include "src/base_api_handler.h"
 
 #include <base/bind.h>
+#include <base/check.h>
 #include <weave/device.h>
 
 #include "src/commands/schema_constants.h"

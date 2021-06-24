@@ -9,6 +9,8 @@
 #include <vector>
 
 #include <base/bind.h>
+#include <base/check.h>
+#include <base/check_op.h>
 #include <base/memory/weak_ptr.h>
 #include <gtest/gtest.h>
 

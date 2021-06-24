@@ -4,6 +4,7 @@
 
 #include "src/privet/wifi_bootstrap_manager.h"
 
+#include <base/check.h>
 #include <base/logging.h>
 #include <base/memory/weak_ptr.h>
 #include <weave/enum_to_string.h>

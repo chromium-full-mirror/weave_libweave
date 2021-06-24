@@ -4,6 +4,7 @@
 
 #include "src/states/state_manager.h"
 
+#include <base/check.h>
 #include <base/logging.h>
 #include <base/values.h>
 

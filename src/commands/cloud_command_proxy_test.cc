@@ -7,6 +7,7 @@
 #include <memory>
 #include <queue>
 
+#include <base/check.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <weave/provider/test/fake_task_runner.h>

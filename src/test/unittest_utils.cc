@@ -6,6 +6,7 @@
 
 #include <algorithm>
 
+#include <base/check.h>
 #include <base/json/json_reader.h>
 #include <base/json/json_writer.h>
 #include <base/logging.h>

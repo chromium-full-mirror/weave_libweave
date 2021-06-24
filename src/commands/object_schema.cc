@@ -8,6 +8,7 @@
 #include <limits>
 #include <utility>
 
+#include <base/check.h>
 #include <base/logging.h>
 #include <base/values.h>
 #include <weave/enum_to_string.h>

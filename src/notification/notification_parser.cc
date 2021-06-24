@@ -4,6 +4,7 @@
 
 #include "src/notification/notification_parser.h"
 
+#include <base/check.h>
 #include <base/logging.h>
 
 namespace weave {

@@ -6,6 +6,7 @@
 
 #include <base/bind.h>
 #include <base/callback.h>
+#include <base/check_op.h>
 #include <weave/provider/task_runner.h>
 #include <weave/stream.h>
 

@@ -4,6 +4,7 @@
 
 #include "src/commands/command_manager.h"
 
+#include <base/check.h>
 #include <base/values.h>
 #include <weave/enum_to_string.h>
 #include <weave/error.h>

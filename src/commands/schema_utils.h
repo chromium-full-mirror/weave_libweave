@@ -14,6 +14,7 @@
 #include <utility>
 #include <vector>
 
+#include <base/check.h>
 #include <base/logging.h>
 #include <base/values.h>
 #include <weave/error.h>

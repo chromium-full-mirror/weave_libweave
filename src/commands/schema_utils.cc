@@ -8,6 +8,7 @@
 #include <set>
 #include <string>
 
+#include <base/check.h>
 #include <base/json/json_writer.h>
 #include <base/location.h>
 #include <base/logging.h>

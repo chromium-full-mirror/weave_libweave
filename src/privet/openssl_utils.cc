@@ -9,6 +9,8 @@
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 
+#include <base/check.h>
+#include <base/check_op.h>
 #include <base/logging.h>
 
 namespace weave {

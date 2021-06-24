@@ -4,6 +4,7 @@
 
 #include "src/privet/device_ui_kind.h"
 
+#include <base/check_op.h>
 #include <base/logging.h>
 
 namespace weave {

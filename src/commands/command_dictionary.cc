@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include <base/check.h>
 #include <base/memory/ptr_util.h>
 #include <base/values.h>
 #include <weave/enum_to_string.h>

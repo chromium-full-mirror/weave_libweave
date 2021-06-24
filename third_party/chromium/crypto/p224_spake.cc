@@ -9,6 +9,7 @@
 
 #include <algorithm>
 
+#include <base/check_op.h>
 #include <base/logging.h>
 #include <base/rand_util.h>
 

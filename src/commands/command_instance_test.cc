@@ -4,6 +4,7 @@
 
 #include "src/commands/command_instance.h"
 
+#include <base/check.h>
 #include <gtest/gtest.h>
 
 #include "src/commands/command_dictionary.h"

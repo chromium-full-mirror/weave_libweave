@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <base/callback.h>
+#include <base/check.h>
 #include <base/gtest_prod_util.h>
 #include <weave/error.h>
 #include <weave/provider/config_store.h>

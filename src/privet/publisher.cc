@@ -6,6 +6,8 @@
 
 #include <map>
 
+#include <base/check.h>
+#include <base/check_op.h>
 #include <weave/error.h>
 #include <weave/provider/dns_service_discovery.h>
 
