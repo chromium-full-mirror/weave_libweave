@@ -32,6 +32,9 @@ namespace weave {
 class StateManager final {
  public:
   explicit StateManager(StateChangeQueueInterface* state_change_queue);
+  StateManager(const StateManager&) = delete;
+  StateManager& operator=(const StateManager&) = delete;
+
   ~StateManager();
 
   void AddChangedCallback(const base::Closure& callback);
@@ -79,8 +82,6 @@ class StateManager final {
   std::map<std::string, std::unique_ptr<StatePackage>> packages_;
 
   std::vector<base::Closure> on_changed_;
-
-  DISALLOW_COPY_AND_ASSIGN(StateManager);
 };
 
 }  // namespace weave

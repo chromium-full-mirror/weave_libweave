@@ -132,6 +132,8 @@ class RequestSender final {
                 const std::string& url,
                 HttpClient* transport)
       : method_{method}, url_{url}, transport_{transport} {}
+  RequestSender(const RequestSender&) = delete;
+  RequestSender& operator=(const RequestSender&) = delete;
 
   void Send(const HttpClient::SendRequestCallback& callback) {
     static int debug_id = 0;
@@ -193,8 +195,6 @@ class RequestSender final {
   std::string mime_type_;
   std::string access_token_;
   HttpClient* transport_{nullptr};
-
-  DISALLOW_COPY_AND_ASSIGN(RequestSender);
 };
 
 // TODO(crbug.com/1099111): change return type to base::Value.

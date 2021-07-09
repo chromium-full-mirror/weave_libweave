@@ -31,6 +31,9 @@ class DeviceManager final : public Device {
                 provider::HttpServer* http_server,
                 provider::Wifi* wifi,
                 provider::Bluetooth* bluetooth);
+  DeviceManager(const DeviceManager&) = delete;
+  DeviceManager& operator=(const DeviceManager&) = delete;
+
   ~DeviceManager() override;
 
   // Device implementation.
@@ -86,7 +89,6 @@ class DeviceManager final : public Device {
   std::unique_ptr<privet::Manager> privet_;
 
   base::WeakPtrFactory<DeviceManager> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(DeviceManager);
 };
 
 }  // namespace weave

@@ -24,11 +24,10 @@ namespace {
 class MockXmppChannelInterface : public XmppChannelInterface {
  public:
   MockXmppChannelInterface() = default;
+  MockXmppChannelInterface(const MockXmppChannelInterface&) = delete;
+  MockXmppChannelInterface& operator=(const MockXmppChannelInterface&) = delete;
 
   MOCK_METHOD1(SendMessage, void(const std::string&));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockXmppChannelInterface);
 };
 
 // Simple class that allows to parse XML from string to XmlNode.

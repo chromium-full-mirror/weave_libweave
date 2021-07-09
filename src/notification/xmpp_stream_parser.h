@@ -53,6 +53,9 @@ class XmppStreamParser final {
   };
 
   explicit XmppStreamParser(Delegate* delegate);
+  XmppStreamParser(const XmppStreamParser&) = delete;
+  XmppStreamParser& operator=(const XmppStreamParser&) = delete;
+
   ~XmppStreamParser();
 
   // Parses additional XML data received from an input stream.
@@ -79,8 +82,6 @@ class XmppStreamParser final {
   XML_Parser parser_{nullptr};
   bool started_{false};
   std::stack<std::unique_ptr<XmlNode>> node_stack_;
-
-  DISALLOW_COPY_AND_ASSIGN(XmppStreamParser);
 };
 
 }  // namespace weave

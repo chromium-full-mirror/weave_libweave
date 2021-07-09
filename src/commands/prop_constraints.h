@@ -29,6 +29,9 @@ enum class ConstraintType { Min, Max, StringLengthMin, StringLengthMax, OneOf };
 class Constraint {
  public:
   Constraint() = default;
+  Constraint(const Constraint&) = delete;
+  Constraint& operator=(const Constraint&) = delete;
+
   virtual ~Constraint();
 
   // Gets the constraint type.
@@ -86,9 +89,6 @@ class Constraint {
   static bool ReportErrorNotOneOf(ErrorPtr* error,
                                   const std::string& val,
                                   const std::vector<std::string>& values);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Constraint);
 };
 
 // ConstraintMinMaxBase is a base class for numeric Minimum and Maximum
@@ -99,6 +99,8 @@ class ConstraintMinMaxBase : public Constraint {
   explicit ConstraintMinMaxBase(const InheritableAttribute<T>& limit)
       : limit_(limit) {}
   explicit ConstraintMinMaxBase(const T& limit) : limit_(limit) {}
+  ConstraintMinMaxBase(const ConstraintMinMaxBase&) = delete;
+  ConstraintMinMaxBase& operator=(const ConstraintMinMaxBase&) = delete;
 
   // Implementation of Constraint::HasOverriddenAttributes().
   bool HasOverriddenAttributes() const override { return !limit_.is_inherited; }
@@ -112,9 +114,6 @@ class ConstraintMinMaxBase : public Constraint {
   // |limit_.is_inherited| indicates whether the constraint is inherited
   // from base schema or overridden.
   InheritableAttribute<T> limit_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ConstraintMinMaxBase);
 };
 
 // Implementation of Minimum value constraint for Integer/Double types.
@@ -124,6 +123,8 @@ class ConstraintMin : public ConstraintMinMaxBase<T> {
   explicit ConstraintMin(const InheritableAttribute<T>& limit)
       : ConstraintMinMaxBase<T>(limit) {}
   explicit ConstraintMin(const T& limit) : ConstraintMinMaxBase<T>(limit) {}
+  ConstraintMin(const ConstraintMin&) = delete;
+  ConstraintMin& operator=(const ConstraintMin&) = delete;
 
   // Implementation of Constraint::GetType().
   ConstraintType GetType() const override { return ConstraintType::Min; }
@@ -152,9 +153,6 @@ class ConstraintMin : public ConstraintMinMaxBase<T> {
   const char* GetDictKey() const override {
     return commands::attributes::kNumeric_Min;
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ConstraintMin);
 };
 
 // Implementation of Maximum value constraint for Integer/Double types.
@@ -164,6 +162,8 @@ class ConstraintMax : public ConstraintMinMaxBase<T> {
   explicit ConstraintMax(const InheritableAttribute<T>& limit)
       : ConstraintMinMaxBase<T>(limit) {}
   explicit ConstraintMax(const T& limit) : ConstraintMinMaxBase<T>(limit) {}
+  ConstraintMax(const ConstraintMax&) = delete;
+  ConstraintMax& operator=(const ConstraintMax&) = delete;
 
   // Implementation of Constraint::GetType().
   ConstraintType GetType() const override { return ConstraintType::Max; }
@@ -191,9 +191,6 @@ class ConstraintMax : public ConstraintMinMaxBase<T> {
   const char* GetDictKey() const override {
     return commands::attributes::kNumeric_Max;
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ConstraintMax);
 };
 
 // ConstraintStringLength is a base class for Minimum/Maximum string length
@@ -202,6 +199,8 @@ class ConstraintStringLength : public Constraint {
  public:
   explicit ConstraintStringLength(const InheritableAttribute<int>& limit);
   explicit ConstraintStringLength(int limit);
+  ConstraintStringLength(const ConstraintStringLength&) = delete;
+  ConstraintStringLength& operator=(const ConstraintStringLength&) = delete;
 
   // Implementation of Constraint::HasOverriddenAttributes().
   bool HasOverriddenAttributes() const override;
@@ -212,9 +211,6 @@ class ConstraintStringLength : public Constraint {
   // |limit_.is_inherited| indicates whether the constraint is inherited
   // from base schema or overridden.
   InheritableAttribute<int> limit_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ConstraintStringLength);
 };
 
 // Implementation of Minimum string length constraint.
@@ -222,6 +218,9 @@ class ConstraintStringLengthMin : public ConstraintStringLength {
  public:
   explicit ConstraintStringLengthMin(const InheritableAttribute<int>& limit);
   explicit ConstraintStringLengthMin(int limit);
+  ConstraintStringLengthMin(const ConstraintStringLengthMin&) = delete;
+  ConstraintStringLengthMin& operator=(const ConstraintStringLengthMin&) =
+      delete;
 
   // Implementation of Constraint::GetType().
   ConstraintType GetType() const override {
@@ -240,9 +239,6 @@ class ConstraintStringLengthMin : public ConstraintStringLength {
   const char* GetDictKey() const override {
     return commands::attributes::kString_MinLength;
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ConstraintStringLengthMin);
 };
 
 // Implementation of Maximum string length constraint.
@@ -250,6 +246,9 @@ class ConstraintStringLengthMax : public ConstraintStringLength {
  public:
   explicit ConstraintStringLengthMax(const InheritableAttribute<int>& limit);
   explicit ConstraintStringLengthMax(int limit);
+  ConstraintStringLengthMax(const ConstraintStringLengthMax&) = delete;
+  ConstraintStringLengthMax& operator=(const ConstraintStringLengthMax&) =
+      delete;
 
   // Implementation of Constraint::GetType().
   ConstraintType GetType() const override {
@@ -269,9 +268,6 @@ class ConstraintStringLengthMax : public ConstraintStringLength {
   const char* GetDictKey() const override {
     return commands::attributes::kString_MaxLength;
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ConstraintStringLengthMax);
 };
 
 // Implementation of OneOf constraint for different data types.
@@ -279,6 +275,8 @@ class ConstraintOneOf : public Constraint {
  public:
   explicit ConstraintOneOf(InheritableAttribute<ValueVector> set);
   explicit ConstraintOneOf(ValueVector set);
+  ConstraintOneOf(const ConstraintOneOf&) = delete;
+  ConstraintOneOf& operator=(const ConstraintOneOf&) = delete;
 
   // Implementation of Constraint::GetType().
   ConstraintType GetType() const override { return ConstraintType::OneOf; }
@@ -305,9 +303,6 @@ class ConstraintOneOf : public Constraint {
   // |set_.is_inherited| indicates whether the constraint is inherited
   // from base schema or overridden.
   InheritableAttribute<ValueVector> set_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ConstraintOneOf);
 };
 
 }  // namespace weave

@@ -57,6 +57,9 @@ class BackoffEntry {
   // Lifetime of policy must enclose lifetime of BackoffEntry. The
   // pointer must be valid but is not dereferenced during construction.
   explicit BackoffEntry(const Policy* const policy);
+  BackoffEntry(const BackoffEntry&) = delete;
+  BackoffEntry& operator=(const BackoffEntry&) = delete;
+
   virtual ~BackoffEntry() = default;
 
   // Inform this item that a request for the network resource it is
@@ -105,8 +108,6 @@ class BackoffEntry {
   int failure_count_;
 
   const Policy* const policy_;
-
-  DISALLOW_COPY_AND_ASSIGN(BackoffEntry);
 };
 
 }  // namespace weave

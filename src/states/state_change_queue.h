@@ -18,6 +18,8 @@ namespace weave {
 class StateChangeQueue : public StateChangeQueueInterface {
  public:
   explicit StateChangeQueue(size_t max_queue_size);
+  StateChangeQueue(const StateChangeQueue&) = delete;
+  StateChangeQueue& operator=(const StateChangeQueue&) = delete;
 
   // Overrides from StateChangeQueueInterface.
   bool IsEmpty() const override { return state_changes_.empty(); }
@@ -43,8 +45,6 @@ class StateChangeQueue : public StateChangeQueueInterface {
 
   // Callback list for state change queue even sinks.
   base::CallbackList<void(UpdateID)> callbacks_;
-
-  DISALLOW_COPY_AND_ASSIGN(StateChangeQueue);
 };
 
 }  // namespace weave

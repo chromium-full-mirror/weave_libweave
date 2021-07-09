@@ -21,6 +21,8 @@ using ErrorPtr = std::unique_ptr<Error>;
 
 class LIBWEAVE_EXPORT Error final {
  public:
+  Error(const Error&) = delete;
+  Error& operator=(const Error&) = delete;
   ~Error() = default;
 
   // Creates an instance of Error class.
@@ -115,9 +117,6 @@ class LIBWEAVE_EXPORT Error final {
   base::Location location_;
   // Pointer to inner error, if any. This forms a chain of errors.
   ErrorPtr inner_error_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Error);
 };
 
 // Default callback type for async operations.

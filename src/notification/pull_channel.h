@@ -25,6 +25,9 @@ extern const char kPullChannelName[];
 class PullChannel : public NotificationChannel {
  public:
   PullChannel(base::TimeDelta pull_interval, provider::TaskRunner* task_runner);
+  PullChannel(const PullChannel&) = delete;
+  PullChannel& operator=(const PullChannel&) = delete;
+
   ~PullChannel() override = default;
 
   // Overrides from NotificationChannel.
@@ -45,7 +48,6 @@ class PullChannel : public NotificationChannel {
   NotificationDelegate* delegate_{nullptr};
 
   base::WeakPtrFactory<PullChannel> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(PullChannel);
 };
 
 }  // namespace weave

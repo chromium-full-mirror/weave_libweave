@@ -24,6 +24,8 @@ class XmlNode final {
  public:
   XmlNode(const std::string& name,
           std::map<std::string, std::string> attributes);
+  XmlNode(const XmlNode&) = delete;
+  XmlNode& operator=(const XmlNode&) = delete;
 
   // The node's name. E.g. in <foo bar="baz">quux</foo> this will return "foo".
   const std::string& name() const;
@@ -113,8 +115,6 @@ class XmlNode final {
   std::string text_;
   std::map<std::string, std::string> attributes_;
   std::vector<std::unique_ptr<XmlNode>> children_;
-
-  DISALLOW_COPY_AND_ASSIGN(XmlNode);
 };
 
 }  // namespace weave

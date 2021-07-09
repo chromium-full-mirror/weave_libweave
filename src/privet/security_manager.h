@@ -55,6 +55,9 @@ class SecurityManager : public SecurityDelegate {
                   bool disable_security,
                   // TODO(vitalybuka): Remove task_runner.
                   provider::TaskRunner* task_runner);
+  SecurityManager(const SecurityManager&) = delete;
+  SecurityManager& operator=(const SecurityManager&) = delete;
+
   ~SecurityManager() override;
 
   // SecurityDelegate methods
@@ -111,8 +114,6 @@ class SecurityManager : public SecurityDelegate {
   PairingEndListener on_end_;
 
   base::WeakPtrFactory<SecurityManager> weak_ptr_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(SecurityManager);
 };
 
 }  // namespace privet

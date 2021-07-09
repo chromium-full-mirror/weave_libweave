@@ -43,6 +43,9 @@ class PrivetHandler : public CloudDelegate::Observer {
                 DeviceDelegate* device,
                 SecurityDelegate* pairing,
                 WifiDelegate* wifi);
+  PrivetHandler(const PrivetHandler&) = delete;
+  PrivetHandler& operator=(const PrivetHandler&) = delete;
+
   ~PrivetHandler() override;
 
   void OnCommandDefsChanged() override;
@@ -150,8 +153,6 @@ class PrivetHandler : public CloudDelegate::Observer {
   ScopedObserver<CloudDelegate, CloudDelegate::Observer> cloud_observer_{this};
 
   base::WeakPtrFactory<PrivetHandler> weak_ptr_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(PrivetHandler);
 };
 
 }  // namespace privet

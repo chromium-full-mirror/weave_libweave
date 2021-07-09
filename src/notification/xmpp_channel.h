@@ -48,6 +48,9 @@ class XmppChannel : public NotificationChannel,
               const std::string& access_token,
               provider::TaskRunner* task_runner,
               provider::Network* network);
+  XmppChannel(const XmppChannel&) = delete;
+  XmppChannel& operator=(const XmppChannel&) = delete;
+
   ~XmppChannel() override = default;
 
   // Overrides from NotificationChannel.
@@ -157,7 +160,6 @@ class XmppChannel : public NotificationChannel,
   base::WeakPtrFactory<XmppChannel> ping_ptr_factory_{this};
   base::WeakPtrFactory<XmppChannel> task_ptr_factory_{this};
   base::WeakPtrFactory<XmppChannel> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(XmppChannel);
 };
 
 }  // namespace weave

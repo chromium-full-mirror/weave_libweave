@@ -36,6 +36,9 @@ class CloudCommandProxy final : public CommandInstance::Observer {
                     StateChangeQueueInterface* state_change_queue,
                     std::unique_ptr<BackoffEntry> backoff_entry,
                     provider::TaskRunner* task_runner);
+  CloudCommandProxy(const CloudCommandProxy&) = delete;
+  CloudCommandProxy& operator=(const CloudCommandProxy&) = delete;
+
   ~CloudCommandProxy() override = default;
 
   // CommandProxyInterface implementation/overloads.
@@ -97,7 +100,6 @@ class CloudCommandProxy final : public CommandInstance::Observer {
 
   base::WeakPtrFactory<CloudCommandProxy> backoff_weak_ptr_factory_{this};
   base::WeakPtrFactory<CloudCommandProxy> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(CloudCommandProxy);
 };
 
 }  // namespace weave

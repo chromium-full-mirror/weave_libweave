@@ -27,6 +27,8 @@ namespace weave {
 class StatePackage final {
  public:
   explicit StatePackage(const std::string& name);
+  StatePackage(const StatePackage&) = delete;
+  StatePackage& operator=(const StatePackage&) = delete;
 
   // Loads state property definitions from a JSON object and adds them
   // to the current package.
@@ -78,7 +80,6 @@ class StatePackage final {
   ValueMap values_;
 
   friend class StatePackageTestHelper;
-  DISALLOW_COPY_AND_ASSIGN(StatePackage);
 };
 
 }  // namespace weave

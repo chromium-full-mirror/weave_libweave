@@ -51,6 +51,8 @@ class CommandDefinition final {
   CommandDefinition(std::unique_ptr<const ObjectSchema> parameters,
                     std::unique_ptr<const ObjectSchema> progress,
                     std::unique_ptr<const ObjectSchema> results);
+  CommandDefinition(const CommandDefinition&) = delete;
+  CommandDefinition& operator=(const CommandDefinition&) = delete;
 
   // Gets the object schema for command parameters.
   const ObjectSchema* GetParameters() const { return parameters_.get(); }
@@ -74,8 +76,6 @@ class CommandDefinition final {
   Visibility visibility_;  // Available to all by default.
   // Minimal role required to execute command.
   UserRole minimal_role_{UserRole::kUser};
-
-  DISALLOW_COPY_AND_ASSIGN(CommandDefinition);
 };
 
 }  // namespace weave

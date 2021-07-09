@@ -48,6 +48,9 @@ class WifiBootstrapManager : public WifiDelegate {
                        provider::Network* shill_client,
                        provider::Wifi* wifi,
                        CloudDelegate* gcd);
+  WifiBootstrapManager(const WifiBootstrapManager&) = delete;
+  WifiBootstrapManager& operator=(const WifiBootstrapManager&) = delete;
+
   ~WifiBootstrapManager() override = default;
   virtual void Init();
 
@@ -112,8 +115,6 @@ class WifiBootstrapManager : public WifiDelegate {
   base::WeakPtrFactory<WifiBootstrapManager> tasks_weak_factory_{this};
 
   base::WeakPtrFactory<WifiBootstrapManager> lifetime_weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(WifiBootstrapManager);
 };
 
 }  // namespace privet

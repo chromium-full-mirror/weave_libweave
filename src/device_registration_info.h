@@ -62,6 +62,8 @@ class DeviceRegistrationInfo : public NotificationDelegate,
                          provider::TaskRunner* task_runner,
                          provider::HttpClient* http_client,
                          provider::Network* network);
+  DeviceRegistrationInfo(const DeviceRegistrationInfo&) = delete;
+  DeviceRegistrationInfo& operator=(const DeviceRegistrationInfo&) = delete;
 
   ~DeviceRegistrationInfo() override;
 
@@ -383,7 +385,6 @@ class DeviceRegistrationInfo : public NotificationDelegate,
   std::vector<std::shared_ptr<const CloudRequestData>> offline_cloud_requests_;
 
   base::WeakPtrFactory<DeviceRegistrationInfo> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(DeviceRegistrationInfo);
 };
 
 }  // namespace weave

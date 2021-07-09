@@ -51,6 +51,9 @@ class CommandInstance final : public Command {
                   Command::Origin origin,
                   const CommandDefinition* command_definition,
                   const ValueMap& parameters);
+  CommandInstance(const CommandInstance&) = delete;
+  CommandInstance& operator=(const CommandInstance&) = delete;
+
   ~CommandInstance() override;
 
   // Command overrides.
@@ -139,8 +142,6 @@ class CommandInstance final : public Command {
   // Pointer to the command queue this command instance is added to.
   // The queue owns the command instance, so it outlives this object.
   CommandQueue* queue_ = nullptr;
-
-  DISALLOW_COPY_AND_ASSIGN(CommandInstance);
 };
 
 }  // namespace weave

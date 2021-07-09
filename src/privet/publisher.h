@@ -30,6 +30,9 @@ class Publisher {
             const CloudDelegate* cloud,
             const WifiDelegate* wifi,
             provider::DnsServiceDiscovery* dns_sd);
+  Publisher(const Publisher&) = delete;
+  Publisher& operator=(const Publisher&) = delete;
+
   ~Publisher();
 
   // Updates published information.  Removes service if HTTP is not alive.
@@ -46,8 +49,6 @@ class Publisher {
   const WifiDelegate* wifi_{nullptr};
 
   std::pair<uint16_t, std::vector<std::string>> published_;
-
-  DISALLOW_COPY_AND_ASSIGN(Publisher);
 };
 
 }  // namespace privet

@@ -45,6 +45,9 @@ class SecurityManager;
 class Manager : public CloudDelegate::Observer {
  public:
   explicit Manager(provider::TaskRunner* task_runner);
+  Manager(const Manager&) = delete;
+  Manager& operator=(const Manager&) = delete;
+
   ~Manager() override;
 
   void Start(provider::Network* network,
@@ -94,7 +97,6 @@ class Manager : public CloudDelegate::Observer {
   ScopedObserver<CloudDelegate, CloudDelegate::Observer> cloud_observer_{this};
 
   base::WeakPtrFactory<Manager> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(Manager);
 };
 
 }  // namespace privet

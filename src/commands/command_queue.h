@@ -24,6 +24,8 @@ namespace weave {
 class CommandQueue final {
  public:
   CommandQueue() = default;
+  CommandQueue(const CommandQueue&) = delete;
+  CommandQueue& operator=(const CommandQueue&) = delete;
 
   // TODO: Remove AddCommandAddedCallback and AddCommandRemovedCallback.
   using CommandCallback = base::Callback<void(Command* command)>;
@@ -86,8 +88,6 @@ class CommandQueue final {
   CallbackList on_command_removed_;
   std::map<std::string, Device::CommandHandlerCallback> command_callbacks_;
   Device::CommandHandlerCallback default_command_callback_;
-
-  DISALLOW_COPY_AND_ASSIGN(CommandQueue);
 };
 
 }  // namespace weave

@@ -36,6 +36,8 @@ class Config final {
   ~Config() = default;
 
   explicit Config(provider::ConfigStore* config_store);
+  Config(const Config&) = delete;
+  Config& operator=(const Config&) = delete;
 
   void AddOnChangedCallback(const OnChangedCallback& callback);
   const Config::Settings& GetSettings() const;
@@ -113,8 +115,6 @@ class Config final {
   Settings settings_;
   provider::ConfigStore* config_store_{nullptr};
   std::vector<OnChangedCallback> on_changed_;
-
-  DISALLOW_COPY_AND_ASSIGN(Config);
 };
 
 }  // namespace weave

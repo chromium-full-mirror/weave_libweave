@@ -26,6 +26,8 @@ struct Settings;
 class BaseApiHandler final {
  public:
   BaseApiHandler(DeviceRegistrationInfo* device_info, Device* device);
+  BaseApiHandler(const BaseApiHandler&) = delete;
+  BaseApiHandler& operator=(const BaseApiHandler&) = delete;
 
  private:
   void UpdateBaseConfiguration(const std::weak_ptr<Command>& command);
@@ -39,7 +41,6 @@ class BaseApiHandler final {
   Device* device_;
 
   base::WeakPtrFactory<BaseApiHandler> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(BaseApiHandler);
 };
 
 }  // namespace weave

@@ -33,6 +33,8 @@ class ObjectSchema;
 class CommandDictionary final {
  public:
   CommandDictionary() = default;
+  CommandDictionary(const CommandDictionary&) = delete;
+  CommandDictionary& operator=(const CommandDictionary&) = delete;
 
   // Loads command definitions from a JSON object. This is done at the daemon
   // startup and whenever a device daemon decides to update its command list.
@@ -78,7 +80,6 @@ class CommandDictionary final {
       ErrorPtr* error);
 
   CommandMap definitions_;  // List of all available command definitions.
-  DISALLOW_COPY_AND_ASSIGN(CommandDictionary);
 };
 
 }  // namespace weave

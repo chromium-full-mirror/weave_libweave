@@ -26,6 +26,8 @@ class CommandInstance;
 class CommandManager final {
  public:
   CommandManager();
+  CommandManager(const CommandManager&) = delete;
+  CommandManager& operator=(const CommandManager&) = delete;
 
   ~CommandManager();
 
@@ -75,8 +77,6 @@ class CommandManager final {
   CommandQueue command_queue_;
   std::vector<base::Callback<void()>> on_command_changed_;
   uint32_t next_command_id_{0};
-
-  DISALLOW_COPY_AND_ASSIGN(CommandManager);
 };
 
 }  // namespace weave

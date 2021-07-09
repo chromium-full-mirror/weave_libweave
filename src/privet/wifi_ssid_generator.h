@@ -18,6 +18,9 @@ class WifiDelegate;
 class WifiSsidGenerator final {
  public:
   WifiSsidGenerator(const CloudDelegate* gcd, const WifiDelegate* wifi);
+  WifiSsidGenerator(const WifiSsidGenerator&) = delete;
+  WifiSsidGenerator& operator=(const WifiSsidGenerator&) = delete;
+
   ~WifiSsidGenerator() = default;
 
   std::string GenerateFlags() const;
@@ -36,8 +39,6 @@ class WifiSsidGenerator final {
   const WifiDelegate* wifi_{nullptr};
 
   base::Callback<int(void)> get_random_;
-
-  DISALLOW_COPY_AND_ASSIGN(WifiSsidGenerator);
 };
 
 }  // namespace privet

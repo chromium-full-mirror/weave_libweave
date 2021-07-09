@@ -31,6 +31,8 @@ class IqStanzaHandler {
 
   IqStanzaHandler(XmppChannelInterface* xmpp_channel,
                   provider::TaskRunner* task_runner);
+  IqStanzaHandler(const IqStanzaHandler&) = delete;
+  IqStanzaHandler& operator=(const IqStanzaHandler&) = delete;
 
   // Sends <iq> request to the server.
   // |type| is the IQ stanza type, one of "get", "set", "query".
@@ -75,7 +77,6 @@ class IqStanzaHandler {
   RequestId last_request_id_{0};
 
   base::WeakPtrFactory<IqStanzaHandler> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(IqStanzaHandler);
 };
 
 }  // namespace weave
