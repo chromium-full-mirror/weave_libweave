@@ -401,7 +401,7 @@ TEST_F(DeviceRegistrationInfoTest, RegisterDevice) {
         base::DictionaryValue* commandDefs = nullptr;
         EXPECT_TRUE(
             json->GetDictionary("deviceDraft.commandDefs", &commandDefs));
-        EXPECT_FALSE(commandDefs->empty());
+        EXPECT_FALSE(commandDefs->DictEmpty());
 
         auto expected = R"({
             'base': {

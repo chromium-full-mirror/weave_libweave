@@ -179,8 +179,9 @@ bool PropType::FromJson(const base::DictionaryValue* value,
   // Read the default value, if specified.
   // We need to do this last since the current type definition must be complete,
   // so we can parse and validate the value of the default.
-  const base::Value* defval = nullptr;  // Owned by value
-  if (value->GetWithoutPathExpansion(commands::attributes::kDefault, &defval)) {
+  const base::Value* defval =
+      value->FindKey(commands::attributes::kDefault);  // Owned by value
+  if (defval) {
     std::unique_ptr<PropValue> prop_value = CreatePropValue(*defval, error);
     if (!prop_value) {
       Error::AddToPrintf(error, FROM_HERE, errors::commands::kDomain,
@@ -527,25 +528,24 @@ bool ObjectPropType::ObjectSchemaFromJson(const base::DictionaryValue* value,
                        kObject_Properties);
     return false;
   }
-  bool extra_properties_allowed = false;
-  if (value->GetBooleanWithoutPathExpansion(kObject_AdditionalProperties,
-                                            &extra_properties_allowed)) {
+  auto extra_properties_allowed =
+      value->FindBoolKey(kObject_AdditionalProperties);
+  if (extra_properties_allowed.has_value()) {
     processed_keys->insert(kObject_AdditionalProperties);
-    object_schema->SetExtraPropertiesAllowed(extra_properties_allowed);
+    object_schema->SetExtraPropertiesAllowed(*extra_properties_allowed);
     inherited = false;
   }
   const base::Value* required = nullptr;
   if (value->Get(commands::attributes::kObject_Required, &required)) {
     processed_keys->insert(commands::attributes::kObject_Required);
-    const base::ListValue* required_list = nullptr;
-    if (!required->GetAsList(&required_list)) {
+    if (!required->is_list()) {
       Error::AddToPrintf(error, FROM_HERE, errors::commands::kDomain,
                          errors::commands::kInvalidObjectSchema,
                          "Property '%s' must be an array",
                          commands::attributes::kObject_Required);
       return false;
     }
-    for (const base::Value& value : *required_list) {
+    for (const base::Value& value : required->GetList()) {
       std::string name;
       if (!value.GetAsString(&name)) {
         std::string json_value;
@@ -619,8 +619,8 @@ bool ArrayPropType::ObjectSchemaFromJson(const base::DictionaryValue* value,
   if (base_schema)
     base_type = base_schema->GetArray()->GetItemTypePtr();
 
-  const base::Value* type_value = nullptr;
-  if (value->GetWithoutPathExpansion(kItems, &type_value)) {
+  const base::Value* type_value = value->FindKey(kItems);
+  if (type_value) {
     processed_keys->insert(kItems);
     auto item_type = ObjectSchema::PropFromJson(*type_value, base_type, error);
     if (!item_type)

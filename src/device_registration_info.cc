@@ -1051,7 +1051,7 @@ void DeviceRegistrationInfo::ProcessInitialCommandList(
     ErrorPtr error) {
   if (error)
     return;
-  for (const base::Value& command : commands) {
+  for (const base::Value& command : commands.GetList()) {
     const base::DictionaryValue* command_dict{nullptr};
     if (!command.GetAsDictionary(&command_dict)) {
       LOG(WARNING) << "Not a command dictionary: " << command;
@@ -1089,7 +1089,7 @@ void DeviceRegistrationInfo::PublishCommands(const base::ListValue& commands,
                                              ErrorPtr error) {
   if (error)
     return;
-  for (const base::Value& command : commands) {
+  for (const base::Value& command : commands.GetList()) {
     const base::DictionaryValue* command_dict{nullptr};
     if (!command.GetAsDictionary(&command_dict)) {
       LOG(WARNING) << "Not a command dictionary: " << command;
@@ -1280,7 +1280,7 @@ void DeviceRegistrationInfo::OnCommandCreated(
 
   VLOG(1) << "Command notification received: " << command;
 
-  if (!command.empty()) {
+  if (!command.DictEmpty()) {
     // GCD spec indicates that the command parameter in notification object
     // "may be empty if command size is too big".
     PublishCommand(command);

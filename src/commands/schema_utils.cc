@@ -143,9 +143,8 @@ bool TypedValueFromJson(const base::Value* value_in,
   for (const auto& pair : object_schema->GetProps()) {
     const PropValue* def_value = pair.second->GetDefaultValue();
     if (dict->HasKey(pair.first)) {
-      const base::Value* param_value = nullptr;
-      CHECK(dict->GetWithoutPathExpansion(pair.first, &param_value))
-          << "Unable to get parameter";
+      const base::Value* param_value = dict->FindKey(pair.first);
+      CHECK(param_value) << "Unable to get parameter";
       auto value = pair.second->CreatePropValue(*param_value, error);
       if (!value) {
         Error::AddToPrintf(error, FROM_HERE, errors::commands::kDomain,
@@ -198,8 +197,7 @@ bool TypedValueFromJson(const base::Value* value_in,
                         const PropType* type,
                         ValueVector* value_out,
                         ErrorPtr* error) {
-  const base::ListValue* list = nullptr;
-  if (!value_in->GetAsList(&list))
+  if (!value_in->is_list())
     return ReportUnexpectedJson(FROM_HERE, value_in, value_out, error);
 
   CHECK(type) << "Array type definition must be provided";
@@ -210,8 +208,8 @@ bool TypedValueFromJson(const base::Value* value_in,
   // This value might already contain values from the type defaults.
   // Clear them first before proceeding.
   value_out->clear();
-  value_out->reserve(list->GetSize());
-  for (const base::Value& item : *list) {
+  value_out->reserve(value_in->GetList().size());
+  for (const base::Value& item : value_in->GetList()) {
     std::unique_ptr<PropValue> prop_value =
         item_type->CreatePropValue(item, error);
     if (!prop_value)
