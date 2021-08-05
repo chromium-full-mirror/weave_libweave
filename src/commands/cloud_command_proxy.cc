@@ -7,6 +7,7 @@
 #include <utility>
 
 #include <base/bind.h>
+#include <base/logging.h>
 #include <weave/enum_to_string.h>
 #include <weave/provider/task_runner.h>
 

@@ -6,6 +6,7 @@
 
 #include <base/bind.h>
 #include <base/check_op.h>
+#include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>
 #include <weave/provider/task_runner.h>
