@@ -4,6 +4,9 @@
 
 #include "src/base_api_handler.h"
 
+#include <utility>
+
+#include <base/optional.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/values.h>
 #include <gtest/gtest.h>
@@ -83,15 +86,11 @@ class BaseApiHandlerTest : public ::testing::Test {
               command_manager_->FindCommand(id)->GetState());
   }
 
-  std::unique_ptr<base::DictionaryValue> GetBaseState() {
+  base::Optional<base::Value> GetBaseState() {
     auto state = state_manager_->GetState();
-    std::set<std::string> result;
-    for (base::DictionaryValue::Iterator it{*state}; !it.IsAtEnd();
-         it.Advance()) {
-      if (it.key() != "base")
-        state->Remove(it.key(), nullptr);
-    }
-    return state;
+    if (base::Value* base_state = state->FindKey("base"))
+      return std::move(*base_state);
+    return base::nullopt;
   }
 
   provider::test::MockConfigStore config_store_;
@@ -162,14 +161,14 @@ TEST_F(BaseApiHandlerTest, UpdateBaseConfiguration) {
   EXPECT_FALSE(settings.local_pairing_enabled);
 
   auto expected = R"({
-    'base': {
-      'firmwareVersion': 'TEST_FIRMWARE',
-      'localAnonymousAccessMaxRole': 'none',
-      'localDiscoveryEnabled': false,
-      'localPairingEnabled': false
-    }
+    'firmwareVersion': 'TEST_FIRMWARE',
+    'localAnonymousAccessMaxRole': 'none',
+    'localDiscoveryEnabled': false,
+    'localPairingEnabled': false
   })";
-  EXPECT_JSON_EQ(expected, *GetBaseState());
+  base::Optional<base::Value> base_state = GetBaseState();
+  ASSERT_TRUE(base_state);
+  EXPECT_JSON_EQ(expected, *base_state);
 
   AddCommand(R"({
     'name' : 'base.updateBaseConfiguration',
@@ -183,28 +182,28 @@ TEST_F(BaseApiHandlerTest, UpdateBaseConfiguration) {
   EXPECT_TRUE(settings.local_discovery_enabled);
   EXPECT_TRUE(settings.local_pairing_enabled);
   expected = R"({
-    'base': {
-      'firmwareVersion': 'TEST_FIRMWARE',
-      'localAnonymousAccessMaxRole': 'user',
-      'localDiscoveryEnabled': true,
-      'localPairingEnabled': true
-    }
+    'firmwareVersion': 'TEST_FIRMWARE',
+    'localAnonymousAccessMaxRole': 'user',
+    'localDiscoveryEnabled': true,
+    'localPairingEnabled': true
   })";
-  EXPECT_JSON_EQ(expected, *GetBaseState());
+  base_state = GetBaseState();
+  ASSERT_TRUE(base_state);
+  EXPECT_JSON_EQ(expected, *base_state);
 
   {
     Config::Transaction change{dev_reg_->GetMutableConfig()};
     change.set_local_anonymous_access_role(AuthScope::kViewer);
   }
   expected = R"({
-    'base': {
-      'firmwareVersion': 'TEST_FIRMWARE',
-      'localAnonymousAccessMaxRole': 'viewer',
-      'localDiscoveryEnabled': true,
-      'localPairingEnabled': true
-    }
+    'firmwareVersion': 'TEST_FIRMWARE',
+    'localAnonymousAccessMaxRole': 'viewer',
+    'localDiscoveryEnabled': true,
+    'localPairingEnabled': true
   })";
-  EXPECT_JSON_EQ(expected, *GetBaseState());
+  base_state = GetBaseState();
+  ASSERT_TRUE(base_state);
+  EXPECT_JSON_EQ(expected, *base_state);
 }
 
 TEST_F(BaseApiHandlerTest, UpdateDeviceInfo) {
