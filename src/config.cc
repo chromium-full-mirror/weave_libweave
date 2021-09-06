@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <set>
+#include <utility>
 
 #include <base/bind.h>
 #include <base/check.h>
@@ -54,13 +55,13 @@ namespace {
 
 const int kCurrentConfigVersion = 1;
 
-void MigrateFromV0(base::DictionaryValue* dict) {
-  std::string cloud_id;
-  if (dict->GetString(config_keys::kCloudId, &cloud_id) && !cloud_id.empty())
+void MigrateFromV0(base::Value* dict) {
+  std::string* cloud_id = dict->FindStringKey(config_keys::kCloudId);
+  if (cloud_id && !cloud_id->empty())
     return;
-  std::unique_ptr<base::Value> tmp;
-  if (dict->Remove(config_keys::kDeviceId, &tmp))
-    dict->Set(config_keys::kCloudId, std::move(tmp));
+  base::Optional<base::Value> tmp = dict->ExtractKey(config_keys::kDeviceId);
+  if (tmp)
+    dict->SetKey(config_keys::kCloudId, std::move(*tmp));
 }
 
 Config::Settings CreateDefaultSettings() {
@@ -134,14 +135,12 @@ void Config::Transaction::LoadState() {
     return;
 
   auto value = base::JSONReader::Read(json_string);
-  base::DictionaryValue* dict = nullptr;
-  if (!value || !value->GetAsDictionary(&dict)) {
+  if (!value || !value->is_dict()) {
     LOG(ERROR) << "Failed to parse settings.";
     return;
   }
 
-  int loaded_version = 0;
-  dict->GetInteger(config_keys::kVersion, &loaded_version);
+  int loaded_version = value->FindIntKey(config_keys::kVersion).value_or(0);
 
   if (loaded_version != kCurrentConfigVersion) {
     LOG(INFO) << "State version mismatch. expected: " << kCurrentConfigVersion
@@ -149,98 +148,93 @@ void Config::Transaction::LoadState() {
     save_ = true;
   }
 
-  if (loaded_version == 0) {
-    MigrateFromV0(dict);
+  if (loaded_version == 0)
+    MigrateFromV0(&value.value());
+
+  if (const std::string* tmp = value->FindStringKey(config_keys::kClientId))
+    set_client_id(*tmp);
+
+  if (const std::string* tmp = value->FindStringKey(config_keys::kClientSecret))
+    set_client_secret(*tmp);
+
+  if (const std::string* tmp = value->FindStringKey(config_keys::kApiKey))
+    set_api_key(*tmp);
+
+  if (const std::string* tmp = value->FindStringKey(config_keys::kOAuthURL))
+    set_oauth_url(*tmp);
+
+  if (const std::string* tmp = value->FindStringKey(config_keys::kServiceURL))
+    set_service_url(*tmp == kDeprecatedUrl ? kWeaveUrl : *tmp);
+
+  if (const std::string* tmp = value->FindStringKey(config_keys::kName))
+    set_name(*tmp);
+
+  if (const std::string* tmp = value->FindStringKey(config_keys::kDescription))
+    set_description(*tmp);
+
+  if (const std::string* tmp = value->FindStringKey(config_keys::kLocation))
+    set_location(*tmp);
+
+  if (const std::string* tmp =
+          value->FindStringKey(config_keys::kLocalAnonymousAccessRole)) {
+    AuthScope scope = AuthScope::kNone;
+    if (StringToEnum(*tmp, &scope))
+      set_local_anonymous_access_role(scope);
   }
 
-  std::string tmp;
-  bool tmp_bool{false};
+  if (auto tmp = value->FindBoolKey(config_keys::kLocalDiscoveryEnabled))
+    set_local_discovery_enabled(*tmp);
 
-  if (dict->GetString(config_keys::kClientId, &tmp))
-    set_client_id(tmp);
+  if (auto tmp = value->FindBoolKey(config_keys::kLocalPairingEnabled))
+    set_local_pairing_enabled(*tmp);
 
-  if (dict->GetString(config_keys::kClientSecret, &tmp))
-    set_client_secret(tmp);
+  if (const std::string* tmp = value->FindStringKey(config_keys::kCloudId))
+    set_cloud_id(*tmp);
 
-  if (dict->GetString(config_keys::kApiKey, &tmp))
-    set_api_key(tmp);
+  if (const std::string* tmp = value->FindStringKey(config_keys::kDeviceId))
+    set_device_id(*tmp);
 
-  if (dict->GetString(config_keys::kOAuthURL, &tmp))
-    set_oauth_url(tmp);
+  if (const std::string* tmp = value->FindStringKey(config_keys::kRefreshToken))
+    set_refresh_token(*tmp);
 
-  if (dict->GetString(config_keys::kServiceURL, &tmp)) {
-    if (tmp == kDeprecatedUrl)
-      tmp = kWeaveUrl;
-    set_service_url(tmp);
-  }
+  if (const std::string* tmp = value->FindStringKey(config_keys::kRobotAccount))
+    set_robot_account(*tmp);
 
-  if (dict->GetString(config_keys::kName, &tmp))
-    set_name(tmp);
+  if (const std::string* tmp =
+          value->FindStringKey(config_keys::kLastConfiguredSsid))
+    set_last_configured_ssid(*tmp);
 
-  if (dict->GetString(config_keys::kDescription, &tmp))
-    set_description(tmp);
-
-  if (dict->GetString(config_keys::kLocation, &tmp))
-    set_location(tmp);
-
-  AuthScope scope{AuthScope::kNone};
-  if (dict->GetString(config_keys::kLocalAnonymousAccessRole, &tmp) &&
-      StringToEnum(tmp, &scope)) {
-    set_local_anonymous_access_role(scope);
-  }
-
-  if (dict->GetBoolean(config_keys::kLocalDiscoveryEnabled, &tmp_bool))
-    set_local_discovery_enabled(tmp_bool);
-
-  if (dict->GetBoolean(config_keys::kLocalPairingEnabled, &tmp_bool))
-    set_local_pairing_enabled(tmp_bool);
-
-  if (dict->GetString(config_keys::kCloudId, &tmp))
-    set_cloud_id(tmp);
-
-  if (dict->GetString(config_keys::kDeviceId, &tmp))
-    set_device_id(tmp);
-
-  if (dict->GetString(config_keys::kRefreshToken, &tmp))
-    set_refresh_token(tmp);
-
-  if (dict->GetString(config_keys::kRobotAccount, &tmp))
-    set_robot_account(tmp);
-
-  if (dict->GetString(config_keys::kLastConfiguredSsid, &tmp))
-    set_last_configured_ssid(tmp);
-
-  if (dict->GetString(config_keys::kSecret, &tmp))
-    set_secret(tmp);
+  if (const std::string* tmp = value->FindStringKey(config_keys::kSecret))
+    set_secret(*tmp);
 }
 
 void Config::Save() {
   if (!config_store_)
     return;
 
-  base::DictionaryValue dict;
-  dict.SetInteger(config_keys::kVersion, kCurrentConfigVersion);
+  base::Value dict(base::Value::Type::DICTIONARY);
+  dict.SetIntKey(config_keys::kVersion, kCurrentConfigVersion);
 
-  dict.SetString(config_keys::kClientId, settings_.client_id);
-  dict.SetString(config_keys::kClientSecret, settings_.client_secret);
-  dict.SetString(config_keys::kApiKey, settings_.api_key);
-  dict.SetString(config_keys::kOAuthURL, settings_.oauth_url);
-  dict.SetString(config_keys::kServiceURL, settings_.service_url);
-  dict.SetString(config_keys::kRefreshToken, settings_.refresh_token);
-  dict.SetString(config_keys::kCloudId, settings_.cloud_id);
-  dict.SetString(config_keys::kDeviceId, settings_.device_id);
-  dict.SetString(config_keys::kRobotAccount, settings_.robot_account);
-  dict.SetString(config_keys::kLastConfiguredSsid,
-                 settings_.last_configured_ssid);
-  dict.SetString(config_keys::kSecret, settings_.secret);
-  dict.SetString(config_keys::kName, settings_.name);
-  dict.SetString(config_keys::kDescription, settings_.description);
-  dict.SetString(config_keys::kLocation, settings_.location);
-  dict.SetString(config_keys::kLocalAnonymousAccessRole,
-                 EnumToString(settings_.local_anonymous_access_role));
-  dict.SetBoolean(config_keys::kLocalDiscoveryEnabled,
+  dict.SetStringKey(config_keys::kClientId, settings_.client_id);
+  dict.SetStringKey(config_keys::kClientSecret, settings_.client_secret);
+  dict.SetStringKey(config_keys::kApiKey, settings_.api_key);
+  dict.SetStringKey(config_keys::kOAuthURL, settings_.oauth_url);
+  dict.SetStringKey(config_keys::kServiceURL, settings_.service_url);
+  dict.SetStringKey(config_keys::kRefreshToken, settings_.refresh_token);
+  dict.SetStringKey(config_keys::kCloudId, settings_.cloud_id);
+  dict.SetStringKey(config_keys::kDeviceId, settings_.device_id);
+  dict.SetStringKey(config_keys::kRobotAccount, settings_.robot_account);
+  dict.SetStringKey(config_keys::kLastConfiguredSsid,
+                    settings_.last_configured_ssid);
+  dict.SetStringKey(config_keys::kSecret, settings_.secret);
+  dict.SetStringKey(config_keys::kName, settings_.name);
+  dict.SetStringKey(config_keys::kDescription, settings_.description);
+  dict.SetStringKey(config_keys::kLocation, settings_.location);
+  dict.SetStringKey(config_keys::kLocalAnonymousAccessRole,
+                    EnumToString(settings_.local_anonymous_access_role));
+  dict.SetBoolKey(config_keys::kLocalDiscoveryEnabled,
                   settings_.local_discovery_enabled);
-  dict.SetBoolean(config_keys::kLocalPairingEnabled,
+  dict.SetBoolKey(config_keys::kLocalPairingEnabled,
                   settings_.local_pairing_enabled);
 
   std::string json_string;
