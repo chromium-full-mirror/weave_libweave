@@ -13,7 +13,7 @@
 #include <base/json/json_writer.h>
 #include <base/logging.h>
 #include <base/memory/weak_ptr.h>
-#include <base/scoped_observer.h>
+#include <base/scoped_observation.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/values.h>
 #include <weave/provider/network.h>
@@ -56,7 +56,7 @@ void Manager::Start(Network* network,
       http_server->GetRequestTimeout());
   cloud_ = CloudDelegate::CreateDefault(task_runner_, device, command_manager,
                                         state_manager);
-  cloud_observer_.Add(cloud_.get());
+  cloud_observer_.Observe(cloud_.get());
   security_.reset(new SecurityManager(
       device->GetSettings().secret, device->GetSettings().pairing_modes,
       device->GetSettings().embedded_code, disable_security_, task_runner_));

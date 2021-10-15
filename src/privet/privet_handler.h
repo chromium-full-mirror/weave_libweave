@@ -11,7 +11,7 @@
 
 #include <base/macros.h>
 #include <base/memory/weak_ptr.h>
-#include <base/scoped_observer.h>
+#include <base/scoped_observation.h>
 
 #include "src/privet/cloud_delegate.h"
 
@@ -150,7 +150,8 @@ class PrivetHandler : public CloudDelegate::Observer {
   uint64_t last_user_id_{0};
   int state_fingerprint_{0};
   int command_defs_fingerprint_{0};
-  ScopedObserver<CloudDelegate, CloudDelegate::Observer> cloud_observer_{this};
+  base::ScopedObservation<CloudDelegate, CloudDelegate::Observer>
+      cloud_observer_{this};
 
   base::WeakPtrFactory<PrivetHandler> weak_ptr_factory_{this};
 };

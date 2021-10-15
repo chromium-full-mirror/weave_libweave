@@ -11,7 +11,7 @@
 #include <vector>
 
 #include <base/memory/weak_ptr.h>
-#include <base/scoped_observer.h>
+#include <base/scoped_observation.h>
 #include <weave/device.h>
 
 #include "src/privet/cloud_delegate.h"
@@ -94,7 +94,8 @@ class Manager : public CloudDelegate::Observer {
   std::unique_ptr<Publisher> publisher_;
   std::unique_ptr<PrivetHandler> privet_handler_;
 
-  ScopedObserver<CloudDelegate, CloudDelegate::Observer> cloud_observer_{this};
+  base::ScopedObservation<CloudDelegate, CloudDelegate::Observer>
+      cloud_observer_{this};
 
   base::WeakPtrFactory<Manager> weak_ptr_factory_{this};
 };

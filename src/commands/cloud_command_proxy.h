@@ -12,7 +12,7 @@
 
 #include <base/macros.h>
 #include <base/memory/weak_ptr.h>
-#include <base/scoped_observer.h>
+#include <base/scoped_observation.h>
 #include <weave/command.h>
 
 #include "src/backoff_entry.h"
@@ -96,7 +96,8 @@ class CloudCommandProxy final : public CommandInstance::Observer {
   // successfully.
   UpdateID last_state_update_id_{0};
 
-  ScopedObserver<CommandInstance, CommandInstance::Observer> observer_{this};
+  base::ScopedObservation<CommandInstance, CommandInstance::Observer> observer_{
+      this};
 
   base::WeakPtrFactory<CloudCommandProxy> backoff_weak_ptr_factory_{this};
   base::WeakPtrFactory<CloudCommandProxy> weak_ptr_factory_{this};

@@ -340,7 +340,7 @@ PrivetHandler::PrivetHandler(CloudDelegate* cloud,
   CHECK(cloud_);
   CHECK(device_);
   CHECK(security_);
-  cloud_observer_.Add(cloud_);
+  cloud_observer_.Observe(cloud_);
 
   AddHandler("/privet/info", &PrivetHandler::HandleInfo, AuthScope::kNone);
   AddHandler("/privet/v3/pairing/start", &PrivetHandler::HandlePairingStart,
