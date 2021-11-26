@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "base/stl_util.h"
 #include <gtest/gtest.h>
 
 namespace crypto {
@@ -778,19 +777,19 @@ TEST(P224, ExternalToInternalAndBack) {
   const std::string external = point.ToString();
 
   ASSERT_EQ(external.size(), 56u);
-  EXPECT_TRUE(memcmp(external.data(), kBasePointExternal,
-                     sizeof(kBasePointExternal)) == 0);
+  EXPECT_EQ(
+      memcmp(external.data(), kBasePointExternal, sizeof(kBasePointExternal)),
+      0);
 }
 
 TEST(P224, ScalarBaseMult) {
   Point point;
 
-  for (size_t i = 0; i < base::size(kNISTTestVectors); i++) {
-    p224::ScalarBaseMult(kNISTTestVectors[i].scalar, &point);
+  for (const auto& v : kNISTTestVectors) {
+    p224::ScalarBaseMult(v.scalar, &point);
     const std::string external = point.ToString();
     ASSERT_EQ(external.size(), 56u);
-    EXPECT_TRUE(memcmp(external.data(), kNISTTestVectors[i].affine,
-                       external.size()) == 0);
+    EXPECT_EQ(memcmp(external.data(), v.affine, external.size()), 0);
   }
 }
 
@@ -804,9 +803,9 @@ TEST(P224, Addition) {
 
   p224::Negate(b, &minus_b);
   p224::Add(a, b, &sum);
-  EXPECT_TRUE(memcmp(&sum, &a, sizeof(sum)) != 0);
+  EXPECT_NE(memcmp(&sum, &a, sizeof(sum)), 0);
   p224::Add(minus_b, sum, &a_again);
-  EXPECT_TRUE(a_again.ToString() == a.ToString());
+  EXPECT_EQ(a_again.ToString(), a.ToString());
 }
 
 TEST(P224, Infinity) {
@@ -816,7 +815,7 @@ TEST(P224, Infinity) {
   // Test that x^0 = ∞.
   Point a;
   p224::ScalarBaseMult(reinterpret_cast<const uint8_t*>(zeros), &a);
-  EXPECT_TRUE(memcmp(zeros, a.ToString().data(), sizeof(zeros)) == 0);
+  EXPECT_EQ(memcmp(zeros, a.ToString().data(), sizeof(zeros)), 0);
 
   // We shouldn't allow ∞ to be imported.
   EXPECT_FALSE(a.SetFromString(std::string(zeros, sizeof(zeros))));
