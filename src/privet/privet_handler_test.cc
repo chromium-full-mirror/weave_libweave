@@ -34,18 +34,16 @@ namespace {
 
 void LoadTestJson(const std::string& test_json,
                   base::DictionaryValue* dictionary) {
-  std::string json = test_json;
-  base::ReplaceChars(json, "'", "\"", &json);
-  int error = 0;
+  std::string json_string = test_json;
+  base::ReplaceChars(json_string, "'", "\"", &json_string);
   std::string message;
-  std::unique_ptr<base::Value> value(
-      base::JSONReader::ReadAndReturnError(json, base::JSON_PARSE_RFC, &error,
-                                           &message)
-          .release());
-  EXPECT_TRUE(value.get()) << "\nError: " << message << "\n" << json;
-  base::DictionaryValue* dictionary_ptr = nullptr;
-  if (value->GetAsDictionary(&dictionary_ptr))
-    dictionary->MergeDictionary(dictionary_ptr);
+  auto json = base::JSONReader::ReadAndReturnValueWithError(
+      json_string, base::JSON_PARSE_RFC);
+  EXPECT_TRUE(json.value) << "\nError: " << json.error_message << "\n"
+                          << json_string;
+  if (json.value->is_dict()) {
+    dictionary->MergeDictionary(&(*json.value));
+  }
 }
 
 bool IsEqualValue(const base::Value& val1, const base::Value& val2) {

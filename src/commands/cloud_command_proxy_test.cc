@@ -68,11 +68,10 @@ class CloudCommandProxyTest : public ::testing::Test {
  protected:
   void SetUp() override {
     // Set up the test StateChangeQueue.
-    auto callback = [this](
-        const base::Callback<void(StateChangeQueueInterface::UpdateID)>& call) {
-      return callbacks_.Add(call).release();
-    };
-    EXPECT_CALL(state_change_queue_, MockAddOnStateUpdatedCallback(_))
+    auto callback =
+        [this](const base::Callback<void(StateChangeQueueInterface::UpdateID)>&
+                   call) { return callbacks_.Add(call); };
+    EXPECT_CALL(state_change_queue_, AddOnStateUpdatedCallback(_))
         .WillRepeatedly(Invoke(callback));
     EXPECT_CALL(state_change_queue_, GetLastStateChangeId())
         .WillRepeatedly(testing::ReturnPointee(&current_state_update_id_));
