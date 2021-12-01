@@ -34,11 +34,11 @@ using testing::WithArgs;
 
 namespace weave {
 
-using test::CreateDictionaryValue;
-using test::CreateValue;
+using provider::HttpClient;
 using provider::test::MockHttpClient;
 using provider::test::MockHttpClientResponse;
-using provider::HttpClient;
+using test::CreateDictionaryValue;
+using test::CreateUniquePtrValue;
 
 namespace {
 
@@ -541,7 +541,7 @@ class DeviceRegistrationInfoUpdateCommandTest
 
     command_url_ = dev_reg_->GetServiceURL("commands/1234");
 
-    auto commands_json = CreateValue(R"([{
+    auto commands_json = CreateUniquePtrValue(R"([{
       'name':'robot._jump',
       'id':'1234',
       'parameters': {'_height': 100},

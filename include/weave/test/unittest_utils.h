@@ -17,7 +17,7 @@ namespace test {
 // Helper method to create base::Value from a string as a smart pointer.
 // For ease of definition in C++ code, double-quotes in the source definition
 // are replaced with apostrophes.
-std::unique_ptr<base::Value> CreateValue(const std::string& json);
+std::unique_ptr<base::Value> CreateUniquePtrValue(const std::string& json);
 
 std::string ValueToString(const base::Value& value);
 
@@ -33,7 +33,8 @@ inline bool IsEqualValue(const base::Value& val1, const base::Value& val2) {
 }  // namespace weave
 
 #define EXPECT_JSON_EQ(expected, actual)                                       \
-  EXPECT_PRED2(weave::test::IsEqualValue, *weave::test::CreateValue(expected), \
+  EXPECT_PRED2(weave::test::IsEqualValue,                                      \
+               *weave::test::CreateUniquePtrValue(expected),                   \
                actual)
 
 #endif  // LIBWEAVE_INCLUDE_WEAVE_TEST_UNITTEST_UTILS_H_

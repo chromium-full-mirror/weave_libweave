@@ -15,7 +15,7 @@
 namespace weave {
 namespace test {
 
-std::unique_ptr<base::Value> CreateValue(const std::string& json) {
+std::unique_ptr<base::Value> CreateUniquePtrValue(const std::string& json) {
   std::string json2(json);
   // Convert apostrophes to double-quotes so JSONReader can parse the string.
   std::replace(json2.begin(), json2.end(), '\'', '"');
@@ -35,7 +35,7 @@ std::string ValueToString(const base::Value& value) {
 
 std::unique_ptr<base::DictionaryValue> CreateDictionaryValue(
     const std::string& json) {
-  std::unique_ptr<base::Value> value = CreateValue(json);
+  std::unique_ptr<base::Value> value = CreateUniquePtrValue(json);
   base::DictionaryValue* dict = nullptr;
   value->GetAsDictionary(&dict);
   CHECK(dict) << "Value is not dictionary: " << json;

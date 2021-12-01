@@ -20,7 +20,7 @@
 namespace weave {
 
 using test::CreateDictionaryValue;
-using test::CreateValue;
+using test::CreateUniquePtrValue;
 
 TEST(CommandSchemaUtils, TypedValueToJson_Scalar) {
   EXPECT_JSON_EQ("true", *TypedValueToJson(true));
@@ -71,17 +71,17 @@ TEST(CommandSchemaUtils, TypedValueToJson_Array) {
 TEST(CommandSchemaUtils, TypedValueFromJson_Bool) {
   bool value;
 
-  EXPECT_TRUE(
-      TypedValueFromJson(CreateValue("true").get(), nullptr, &value, nullptr));
+  EXPECT_TRUE(TypedValueFromJson(CreateUniquePtrValue("true").get(), nullptr,
+                                 &value, nullptr));
   EXPECT_TRUE(value);
 
-  EXPECT_TRUE(
-      TypedValueFromJson(CreateValue("false").get(), nullptr, &value, nullptr));
+  EXPECT_TRUE(TypedValueFromJson(CreateUniquePtrValue("false").get(), nullptr,
+                                 &value, nullptr));
   EXPECT_FALSE(value);
 
   ErrorPtr error;
-  EXPECT_FALSE(
-      TypedValueFromJson(CreateValue("0").get(), nullptr, &value, &error));
+  EXPECT_FALSE(TypedValueFromJson(CreateUniquePtrValue("0").get(), nullptr,
+                                  &value, &error));
   EXPECT_EQ(errors::commands::kTypeMismatch, error->GetCode());
   error.reset();
 }
@@ -89,21 +89,21 @@ TEST(CommandSchemaUtils, TypedValueFromJson_Bool) {
 TEST(CommandSchemaUtils, TypedValueFromJson_Int) {
   int value;
 
-  EXPECT_TRUE(
-      TypedValueFromJson(CreateValue("0").get(), nullptr, &value, nullptr));
+  EXPECT_TRUE(TypedValueFromJson(CreateUniquePtrValue("0").get(), nullptr,
+                                 &value, nullptr));
   EXPECT_EQ(0, value);
 
-  EXPECT_TRUE(
-      TypedValueFromJson(CreateValue("23").get(), nullptr, &value, nullptr));
+  EXPECT_TRUE(TypedValueFromJson(CreateUniquePtrValue("23").get(), nullptr,
+                                 &value, nullptr));
   EXPECT_EQ(23, value);
 
-  EXPECT_TRUE(
-      TypedValueFromJson(CreateValue("-1234").get(), nullptr, &value, nullptr));
+  EXPECT_TRUE(TypedValueFromJson(CreateUniquePtrValue("-1234").get(), nullptr,
+                                 &value, nullptr));
   EXPECT_EQ(-1234, value);
 
   ErrorPtr error;
-  EXPECT_FALSE(
-      TypedValueFromJson(CreateValue("'abc'").get(), nullptr, &value, &error));
+  EXPECT_FALSE(TypedValueFromJson(CreateUniquePtrValue("'abc'").get(), nullptr,
+                                  &value, &error));
   EXPECT_EQ(errors::commands::kTypeMismatch, error->GetCode());
   error.reset();
 }
@@ -111,27 +111,27 @@ TEST(CommandSchemaUtils, TypedValueFromJson_Int) {
 TEST(CommandSchemaUtils, TypedValueFromJson_Double) {
   double value;
 
-  EXPECT_TRUE(
-      TypedValueFromJson(CreateValue("0").get(), nullptr, &value, nullptr));
+  EXPECT_TRUE(TypedValueFromJson(CreateUniquePtrValue("0").get(), nullptr,
+                                 &value, nullptr));
   EXPECT_DOUBLE_EQ(0.0, value);
-  EXPECT_TRUE(
-      TypedValueFromJson(CreateValue("0.0").get(), nullptr, &value, nullptr));
+  EXPECT_TRUE(TypedValueFromJson(CreateUniquePtrValue("0.0").get(), nullptr,
+                                 &value, nullptr));
   EXPECT_DOUBLE_EQ(0.0, value);
 
-  EXPECT_TRUE(
-      TypedValueFromJson(CreateValue("23").get(), nullptr, &value, nullptr));
+  EXPECT_TRUE(TypedValueFromJson(CreateUniquePtrValue("23").get(), nullptr,
+                                 &value, nullptr));
   EXPECT_EQ(23.0, value);
-  EXPECT_TRUE(
-      TypedValueFromJson(CreateValue("23.1").get(), nullptr, &value, nullptr));
+  EXPECT_TRUE(TypedValueFromJson(CreateUniquePtrValue("23.1").get(), nullptr,
+                                 &value, nullptr));
   EXPECT_EQ(23.1, value);
 
-  EXPECT_TRUE(TypedValueFromJson(CreateValue("-1.23E+02").get(), nullptr,
-                                 &value, nullptr));
+  EXPECT_TRUE(TypedValueFromJson(CreateUniquePtrValue("-1.23E+02").get(),
+                                 nullptr, &value, nullptr));
   EXPECT_EQ(-123.0, value);
 
   ErrorPtr error;
-  EXPECT_FALSE(
-      TypedValueFromJson(CreateValue("'abc'").get(), nullptr, &value, &error));
+  EXPECT_FALSE(TypedValueFromJson(CreateUniquePtrValue("'abc'").get(), nullptr,
+                                  &value, &error));
   EXPECT_EQ(errors::commands::kTypeMismatch, error->GetCode());
   error.reset();
 }
@@ -139,21 +139,21 @@ TEST(CommandSchemaUtils, TypedValueFromJson_Double) {
 TEST(CommandSchemaUtils, TypedValueFromJson_String) {
   std::string value;
 
-  EXPECT_TRUE(
-      TypedValueFromJson(CreateValue("''").get(), nullptr, &value, nullptr));
+  EXPECT_TRUE(TypedValueFromJson(CreateUniquePtrValue("''").get(), nullptr,
+                                 &value, nullptr));
   EXPECT_EQ("", value);
 
-  EXPECT_TRUE(
-      TypedValueFromJson(CreateValue("'23'").get(), nullptr, &value, nullptr));
+  EXPECT_TRUE(TypedValueFromJson(CreateUniquePtrValue("'23'").get(), nullptr,
+                                 &value, nullptr));
   EXPECT_EQ("23", value);
 
-  EXPECT_TRUE(
-      TypedValueFromJson(CreateValue("'abc'").get(), nullptr, &value, nullptr));
+  EXPECT_TRUE(TypedValueFromJson(CreateUniquePtrValue("'abc'").get(), nullptr,
+                                 &value, nullptr));
   EXPECT_EQ("abc", value);
 
   ErrorPtr error;
-  EXPECT_FALSE(
-      TypedValueFromJson(CreateValue("12").get(), nullptr, &value, &error));
+  EXPECT_FALSE(TypedValueFromJson(CreateUniquePtrValue("12").get(), nullptr,
+                                  &value, &error));
   EXPECT_EQ(errors::commands::kTypeMismatch, error->GetCode());
   error.reset();
 }
@@ -172,8 +172,9 @@ TEST(CommandSchemaUtils, TypedValueFromJson_Object) {
 
   ObjectPropType type;
   type.SetObjectSchema(std::move(schema));
-  EXPECT_TRUE(TypedValueFromJson(CreateValue("{'age':20,'name':'Bob'}").get(),
-                                 &type, &value, nullptr));
+  EXPECT_TRUE(
+      TypedValueFromJson(CreateUniquePtrValue("{'age':20,'name':'Bob'}").get(),
+                         &type, &value, nullptr));
   ValueMap value2;
   value2.insert(std::make_pair(
       "age", age_prop.CreateValue(base::Value{20}, nullptr)));
@@ -182,8 +183,8 @@ TEST(CommandSchemaUtils, TypedValueFromJson_Object) {
   EXPECT_EQ(value2, value);
 
   ErrorPtr error;
-  EXPECT_FALSE(
-      TypedValueFromJson(CreateValue("'abc'").get(), nullptr, &value, &error));
+  EXPECT_FALSE(TypedValueFromJson(CreateUniquePtrValue("'abc'").get(), nullptr,
+                                  &value, &error));
   EXPECT_EQ(errors::commands::kTypeMismatch, error->GetCode());
   error.reset();
 }
@@ -195,16 +196,16 @@ TEST(CommandSchemaUtils, TypedValueFromJson_Array) {
   ArrayPropType type;
   type.SetItemType(str_type.Clone());
 
-  EXPECT_TRUE(TypedValueFromJson(CreateValue("['foo', 'bar']").get(), &type,
-                                 &arr, nullptr));
+  EXPECT_TRUE(TypedValueFromJson(CreateUniquePtrValue("['foo', 'bar']").get(),
+                                 &type, &arr, nullptr));
   ValueVector arr2;
   arr2.push_back(str_type.CreateValue(base::Value{"foo"}, nullptr));
   arr2.push_back(str_type.CreateValue(base::Value{"bar"}, nullptr));
   EXPECT_EQ(arr2, arr);
 
   ErrorPtr error;
-  EXPECT_FALSE(TypedValueFromJson(CreateValue("['baz', 'ab']").get(), &type,
-                                  &arr, &error));
+  EXPECT_FALSE(TypedValueFromJson(CreateUniquePtrValue("['baz', 'ab']").get(),
+                                  &type, &arr, &error));
   EXPECT_EQ(errors::commands::kOutOfRange, error->GetCode());
   error.reset();
 }

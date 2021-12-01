@@ -21,8 +21,8 @@
 
 namespace weave {
 
-using test::CreateValue;
 using test::CreateDictionaryValue;
+using test::CreateUniquePtrValue;
 
 namespace {
 
@@ -130,31 +130,31 @@ TEST(CommandSchema, IntPropType_Validate) {
   IntPropType prop;
   prop.AddMinMaxConstraint(2, 4);
   ErrorPtr error;
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("-1"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("-1"), &error));
   EXPECT_EQ("out_of_range", error->GetCode());
   error.reset();
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("0"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("0"), &error));
   EXPECT_EQ("out_of_range", error->GetCode());
   error.reset();
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("1"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("1"), &error));
   EXPECT_EQ("out_of_range", error->GetCode());
   error.reset();
-  EXPECT_TRUE(ValidateValue(prop, *CreateValue("2"), &error));
+  EXPECT_TRUE(ValidateValue(prop, *CreateUniquePtrValue("2"), &error));
   EXPECT_EQ(nullptr, error.get());
-  EXPECT_TRUE(ValidateValue(prop, *CreateValue("3"), &error));
+  EXPECT_TRUE(ValidateValue(prop, *CreateUniquePtrValue("3"), &error));
   EXPECT_EQ(nullptr, error.get());
-  EXPECT_TRUE(ValidateValue(prop, *CreateValue("4"), &error));
+  EXPECT_TRUE(ValidateValue(prop, *CreateUniquePtrValue("4"), &error));
   EXPECT_EQ(nullptr, error.get());
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("5"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("5"), &error));
   EXPECT_EQ("out_of_range", error->GetCode());
   error.reset();
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("true"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("true"), &error));
   EXPECT_EQ("type_mismatch", error->GetCode());
   error.reset();
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("3.0"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("3.0"), &error));
   EXPECT_EQ("type_mismatch", error->GetCode());
   error.reset();
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("'3'"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("'3'"), &error));
   EXPECT_EQ("type_mismatch", error->GetCode());
 }
 
@@ -232,18 +232,18 @@ TEST(CommandSchema, BoolPropType_Validate) {
   BooleanPropType prop;
   prop.FromJson(CreateDictionaryValue("{'enum':[true]}").get(), &prop, nullptr);
   ErrorPtr error;
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("false"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("false"), &error));
   EXPECT_EQ("out_of_range", error->GetCode());
   error.reset();
-  EXPECT_TRUE(ValidateValue(prop, *CreateValue("true"), &error));
+  EXPECT_TRUE(ValidateValue(prop, *CreateUniquePtrValue("true"), &error));
   error.reset();
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("1"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("1"), &error));
   EXPECT_EQ("type_mismatch", error->GetCode());
   error.reset();
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("3.0"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("3.0"), &error));
   EXPECT_EQ("type_mismatch", error->GetCode());
   error.reset();
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("'3'"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("'3'"), &error));
   EXPECT_EQ("type_mismatch", error->GetCode());
 }
 
@@ -342,25 +342,25 @@ TEST(CommandSchema, DoublePropType_Validate) {
   DoublePropType prop;
   prop.AddMinMaxConstraint(-1.2, 1.3);
   ErrorPtr error;
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("-2"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("-2"), &error));
   EXPECT_EQ("out_of_range", error->GetCode());
   error.reset();
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("-1.3"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("-1.3"), &error));
   EXPECT_EQ("out_of_range", error->GetCode());
   error.reset();
-  EXPECT_TRUE(ValidateValue(prop, *CreateValue("-1.2"), &error));
+  EXPECT_TRUE(ValidateValue(prop, *CreateUniquePtrValue("-1.2"), &error));
   EXPECT_EQ(nullptr, error.get());
-  EXPECT_TRUE(ValidateValue(prop, *CreateValue("0.0"), &error));
+  EXPECT_TRUE(ValidateValue(prop, *CreateUniquePtrValue("0.0"), &error));
   EXPECT_EQ(nullptr, error.get());
-  EXPECT_TRUE(ValidateValue(prop, *CreateValue("1.3"), &error));
+  EXPECT_TRUE(ValidateValue(prop, *CreateUniquePtrValue("1.3"), &error));
   EXPECT_EQ(nullptr, error.get());
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("1.31"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("1.31"), &error));
   EXPECT_EQ("out_of_range", error->GetCode());
   error.reset();
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("true"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("true"), &error));
   EXPECT_EQ("type_mismatch", error->GetCode());
   error.reset();
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("'0.0'"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("'0.0'"), &error));
   EXPECT_EQ("type_mismatch", error->GetCode());
 }
 
@@ -461,30 +461,30 @@ TEST(CommandSchema, StringPropType_Validate) {
   StringPropType prop;
   prop.AddLengthConstraint(1, 3);
   ErrorPtr error;
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("''"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("''"), &error));
   EXPECT_EQ("out_of_range", error->GetCode());
   error.reset();
   prop.AddLengthConstraint(2, 3);
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("''"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("''"), &error));
   EXPECT_EQ("out_of_range", error->GetCode());
   error.reset();
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("'a'"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("'a'"), &error));
   EXPECT_EQ("out_of_range", error->GetCode());
   error.reset();
-  EXPECT_TRUE(ValidateValue(prop, *CreateValue("'ab'"), &error));
+  EXPECT_TRUE(ValidateValue(prop, *CreateUniquePtrValue("'ab'"), &error));
   EXPECT_EQ(nullptr, error.get());
-  EXPECT_TRUE(ValidateValue(prop, *CreateValue("'abc'"), &error));
+  EXPECT_TRUE(ValidateValue(prop, *CreateUniquePtrValue("'abc'"), &error));
   EXPECT_EQ(nullptr, error.get());
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("'abcd'"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("'abcd'"), &error));
   EXPECT_EQ("out_of_range", error->GetCode());
   error.reset();
 
   prop.FromJson(CreateDictionaryValue("{'enum':['abc','def','xyz!!']}").get(),
                 nullptr, &error);
-  EXPECT_TRUE(ValidateValue(prop, *CreateValue("'abc'"), &error));
-  EXPECT_TRUE(ValidateValue(prop, *CreateValue("'def'"), &error));
-  EXPECT_TRUE(ValidateValue(prop, *CreateValue("'xyz!!'"), &error));
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("'xyz'"), &error));
+  EXPECT_TRUE(ValidateValue(prop, *CreateUniquePtrValue("'abc'"), &error));
+  EXPECT_TRUE(ValidateValue(prop, *CreateUniquePtrValue("'def'"), &error));
+  EXPECT_TRUE(ValidateValue(prop, *CreateUniquePtrValue("'xyz!!'"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("'xyz'"), &error));
   EXPECT_EQ("out_of_range", error->GetCode());
   error.reset();
 }
@@ -683,29 +683,33 @@ TEST(CommandSchema, ObjectPropType_Validate) {
       nullptr, nullptr);
   ErrorPtr error;
   EXPECT_TRUE(ValidateValue(
-      prop, *CreateValue("{'expires':10,'password':'abcdef'}"), &error));
-  error.reset();
-
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("{'expires':10}"), &error));
-  EXPECT_EQ("parameter_missing", error->GetCode());
+      prop, *CreateUniquePtrValue("{'expires':10,'password':'abcdef'}"),
+      &error));
   error.reset();
 
   EXPECT_FALSE(
-      ValidateValue(prop, *CreateValue("{'password':'abcdef'}"), &error));
+      ValidateValue(prop, *CreateUniquePtrValue("{'expires':10}"), &error));
   EXPECT_EQ("parameter_missing", error->GetCode());
   error.reset();
 
   EXPECT_FALSE(ValidateValue(
-      prop, *CreateValue("{'expires':10,'password':'abcde'}"), &error));
+      prop, *CreateUniquePtrValue("{'password':'abcdef'}"), &error));
+  EXPECT_EQ("parameter_missing", error->GetCode());
+  error.reset();
+
+  EXPECT_FALSE(ValidateValue(
+      prop, *CreateUniquePtrValue("{'expires':10,'password':'abcde'}"),
+      &error));
   EXPECT_EQ("out_of_range", error->GetFirstError()->GetCode());
   error.reset();
 
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("2"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("2"), &error));
   EXPECT_EQ("type_mismatch", error->GetCode());
   error.reset();
 
   EXPECT_FALSE(ValidateValue(
-      prop, *CreateValue("{'expires':10,'password':'abcdef','retry':true}"),
+      prop,
+      *CreateUniquePtrValue("{'expires':10,'password':'abcdef','retry':true}"),
       &error));
   EXPECT_EQ("unexpected_parameter", error->GetCode());
   error.reset();
@@ -720,16 +724,16 @@ TEST(CommandSchema, ObjectPropType_Validate_Enum) {
           .get(),
       nullptr, nullptr));
   ErrorPtr error;
-  EXPECT_TRUE(
-      ValidateValue(prop, *CreateValue("{'height':20,'width':10}"), &error));
+  EXPECT_TRUE(ValidateValue(
+      prop, *CreateUniquePtrValue("{'height':20,'width':10}"), &error));
   error.reset();
 
-  EXPECT_TRUE(
-      ValidateValue(prop, *CreateValue("{'height':200,'width':100}"), &error));
+  EXPECT_TRUE(ValidateValue(
+      prop, *CreateUniquePtrValue("{'height':200,'width':100}"), &error));
   error.reset();
 
-  EXPECT_FALSE(
-      ValidateValue(prop, *CreateValue("{'height':12,'width':10}"), &error));
+  EXPECT_FALSE(ValidateValue(
+      prop, *CreateUniquePtrValue("{'height':12,'width':10}"), &error));
   EXPECT_EQ("out_of_range", error->GetCode());
   error.reset();
 }
@@ -831,14 +835,15 @@ TEST(CommandSchema, ArrayPropType_Validate) {
       nullptr, nullptr);
 
   ErrorPtr error;
-  EXPECT_TRUE(ValidateValue(prop, *CreateValue("[3,4,10.5]"), &error));
+  EXPECT_TRUE(ValidateValue(prop, *CreateUniquePtrValue("[3,4,10.5]"), &error));
   error.reset();
 
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("[2]"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("[2]"), &error));
   EXPECT_EQ("out_of_range", error->GetCode());
   error.reset();
 
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("[4, 5, 20]"), &error));
+  EXPECT_FALSE(
+      ValidateValue(prop, *CreateUniquePtrValue("[4, 5, 20]"), &error));
   EXPECT_EQ("out_of_range", error->GetCode());
   error.reset();
 }
@@ -851,14 +856,14 @@ TEST(CommandSchema, ArrayPropType_Validate_Enum) {
       nullptr, nullptr);
 
   ErrorPtr error;
-  EXPECT_TRUE(ValidateValue(prop, *CreateValue("[2,3]"), &error));
+  EXPECT_TRUE(ValidateValue(prop, *CreateUniquePtrValue("[2,3]"), &error));
   error.reset();
 
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("[2]"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("[2]"), &error));
   EXPECT_EQ("out_of_range", error->GetCode());
   error.reset();
 
-  EXPECT_FALSE(ValidateValue(prop, *CreateValue("[2,3,4]"), &error));
+  EXPECT_FALSE(ValidateValue(prop, *CreateUniquePtrValue("[2,3,4]"), &error));
   EXPECT_EQ("out_of_range", error->GetCode());
   error.reset();
 }
@@ -881,7 +886,8 @@ TEST(CommandSchema, ArrayPropType_CreateValue) {
   EXPECT_JSON_EQ("[]", *val->ToJson());
 
   val = prop.CreateValue(
-      *CreateValue("[{'height':20,'width':10},{'width':17, 'height':18}]"),
+      *CreateUniquePtrValue(
+          "[{'height':20,'width':10},{'width':17, 'height':18}]"),
       &error);
   ASSERT_NE(nullptr, val.get());
   EXPECT_EQ(nullptr, error.get());

@@ -250,7 +250,7 @@ TEST_F(ConfigTest, Setters) {
           'secret': 'set_secret',
           'service_url': 'set_service_url'
         })";
-        EXPECT_JSON_EQ(expected, *test::CreateValue(json));
+        EXPECT_JSON_EQ(expected, *test::CreateUniquePtrValue(json));
       }));
 
   change.Commit();

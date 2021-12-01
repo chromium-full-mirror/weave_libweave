@@ -27,14 +27,14 @@ using testing::SaveArg;
 namespace weave {
 
 using test::CreateDictionaryValue;
-using test::CreateValue;
+using test::CreateUniquePtrValue;
 
 namespace {
 
 const char kCmdID[] = "abcd";
 
 MATCHER_P(MatchJson, str, "") {
-  return arg.Equals(CreateValue(str).get());
+  return arg.Equals(CreateUniquePtrValue(str).get());
 }
 
 class MockCloudCommandUpdateInterface : public CloudCommandUpdateInterface {

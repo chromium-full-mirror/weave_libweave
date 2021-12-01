@@ -15,7 +15,7 @@
 namespace weave {
 
 using test::CreateDictionaryValue;
-using test::CreateValue;
+using test::CreateUniquePtrValue;
 
 namespace {
 
@@ -135,7 +135,7 @@ TEST_F(CommandInstanceTest, FromJson_ParamsOmitted) {
 }
 
 TEST_F(CommandInstanceTest, FromJson_NotObject) {
-  auto json = CreateValue("'string'");
+  auto json = CreateUniquePtrValue("'string'");
   ErrorPtr error;
   auto instance = CommandInstance::FromJson(json.get(), Command::Origin::kCloud,
                                             dict_, nullptr, &error);
